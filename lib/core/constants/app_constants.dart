@@ -1,55 +1,116 @@
 class AppConstants {
+  // Configuración de OpenAI
+  static const String openaiApiKey = 'TU_API_KEY_AQUI'; // Reemplaza con tu API key
+  static const String openaiBaseUrl = 'https://api.openai.com/v1';
+  static const String openaiModel = 'gpt-4-vision-preview';
+  
   // Configuración de la aplicación
   static const String appName = 'Bovino IA';
   static const String appVersion = '1.0.0';
   static const String appDescription = 'Análisis de ganado bovino con IA';
   
-  // Configuración de API
-  static const String openaiBaseUrl = 'https://api.openai.com/v1';
-  static const String openaiModel = 'gpt-4-vision-preview';
-  static const String openaiApiKey = 'TU_API_KEY_AQUI'; // Configurar en producción
+  // Configuración de la cámara
+  static const int maxImageSize = 1024; // Tamaño máximo de imagen en KB
+  static const double imageQuality = 0.8; // Calidad de imagen (0.0 - 1.0)
+  static const Duration minCaptureInterval = Duration(seconds: 2); // Intervalo mínimo entre capturas
+  static const Duration defaultFrameInterval = Duration(seconds: 3); // Intervalo por defecto para captura automática
+  static const int defaultMaxFrames = 10; // Número máximo de frames por sesión
   
-  // Configuración de cámara
-  static const int maxImageSize = 1024; // KB
-  static const double imageQuality = 0.8;
+  // Configuración de análisis
   static const int maxTokens = 1000;
-  static const int timeoutSeconds = 30;
+  static const Duration timeoutSeconds = Duration(seconds: 30);
+  static const Duration analysisRateLimit = Duration(seconds: 2); // Rate limiting para análisis
+  static const int maxConcurrentAnalyses = 1; // Análisis concurrentes máximos
+  
+  // Configuración de la cola de análisis
+  static const Duration queueProcessingInterval = Duration(milliseconds: 500);
+  static const int maxQueueSize = 50; // Tamaño máximo de la cola
+  
+  // Mensajes de la aplicación
+  static const Map<String, String> messages = {
+    'cameraPermission': 'Se requieren permisos de cámara para usar esta función',
+    'noCameras': 'No se encontraron cámaras disponibles',
+    'analyzing': 'Analizando imagen del bovino...',
+    'errorAnalysis': 'Error al analizar la imagen',
+    'networkError': 'Error de conexión. Verifica tu internet',
+    'apiKeyError': 'Error con la API key de OpenAI',
+    'captureError': 'Error al capturar imagen',
+    'queueFull': 'Cola de análisis llena. Espera un momento',
+    'rateLimitExceeded': 'Demasiadas solicitudes. Espera un momento',
+    'cameraInitializing': 'Inicializando cámara...',
+    'cameraReady': 'Cámara lista para capturar',
+    'capturingFrames': 'Capturando frames automáticamente',
+    'processingQueue': 'Procesando cola de análisis',
+  };
+  
+  // Razas de ganado conocidas para validación
+  static const List<String> knownBreeds = [
+    'Holstein',
+    'Angus',
+    'Brahman',
+    'Hereford',
+    'Simmental',
+    'Charolais',
+    'Limousin',
+    'Jersey',
+    'Guernsey',
+    'Ayrshire',
+    'Brown Swiss',
+    'Shorthorn',
+    'Gelbvieh',
+    'Red Angus',
+    'Belted Galloway',
+    'Highland',
+    'Longhorn',
+    'Wagyu',
+    'Piedmontese',
+    'Chianina',
+  ];
   
   // Configuración de UI
-  static const double defaultPadding = 16.0;
-  static const double defaultMargin = 8.0;
-  static const double defaultBorderRadius = 12.0;
-  static const double defaultElevation = 4.0;
-  
-  // Colores de la aplicación
-  static const int primaryColor = 0xFF4CAF50;
-  static const int secondaryColor = 0xFF81C784;
-  static const int backgroundColor = 0xFFF5F5F5;
-  static const int textColor = 0xFF212121;
-  static const int errorColor = 0xFFE57373;
-  static const int successColor = 0xFF81C784;
-  static const int warningColor = 0xFFFFB74D;
-  
-  // Tiempos de animación
-  static const Duration shortAnimation = Duration(milliseconds: 200);
-  static const Duration mediumAnimation = Duration(milliseconds: 300);
-  static const Duration longAnimation = Duration(milliseconds: 500);
-  
-  // Mensajes de error
-  static const String errorNetwork = 'Error de conexión. Verifica tu internet.';
-  static const String errorCamera = 'Error al acceder a la cámara.';
-  static const String errorAnalysis = 'Error al analizar la imagen.';
-  static const String errorApiKey = 'API key no configurada.';
-  static const String errorTimeout = 'Tiempo de espera agotado.';
-  
-  // Mensajes de éxito
-  static const String successAnalysis = 'Análisis completado exitosamente.';
-  static const String successImageCapture = 'Imagen capturada correctamente.';
-  
-  // Estados de carga
-  static const String loadingAnalysis = 'Analizando imagen...';
-  static const String loadingCamera = 'Inicializando cámara...';
-  static const String loadingNetwork = 'Conectando con el servidor...';
+  static const Map<String, dynamic> uiConfig = {
+    'primaryColor': 0xFF4CAF50,
+    'secondaryColor': 0xFF81C784,
+    'backgroundColor': 0xFFF5F5F5,
+    'textColor': 0xFF212121,
+    'borderRadius': 12.0,
+    'padding': 16.0,
+    'margin': 8.0,
+    'cameraAspectRatio': 4/3,
+    'previewAspectRatio': 16/9,
+  };
+
+  // Configuración de resolución de cámara
+  static const Map<String, dynamic> cameraResolutions = {
+    'low': {
+      'width': 640,
+      'height': 480,
+      'quality': 0.5,
+    },
+    'medium': {
+      'width': 1280,
+      'height': 720,
+      'quality': 0.7,
+    },
+    'high': {
+      'width': 1920,
+      'height': 1080,
+      'quality': 0.8,
+    },
+    'ultra': {
+      'width': 3840,
+      'height': 2160,
+      'quality': 0.9,
+    },
+  };
+
+  // Configuración de almacenamiento
+  static const Map<String, dynamic> storageConfig = {
+    'maxHistorialSize': 100,
+    'autoCleanupDays': 30,
+    'compressionEnabled': true,
+    'compressionQuality': 0.8,
+  };
 }
 
 class ApiEndpoints {
