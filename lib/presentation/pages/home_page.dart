@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
+
+// Core
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_messages.dart';
+import '../../core/routes/app_router.dart';
+
+// Atoms
+import '../widgets/atoms/custom_icon.dart';
+import '../widgets/atoms/custom_text.dart';
+import '../widgets/atoms/custom_button.dart';
+
+// Molecules
+import '../widgets/molecules/theme_toggle_button.dart';
+import '../widgets/molecules/theme_indicator.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -8,66 +21,22 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bovino IA'),
+        title: const TitleText(text: 'Bovino IA'),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.contentTextLight,
-        elevation: 0,
-        actions: [
+        elevation: AppUIConfig.appBarElevation,
+        actions: const [
+          // Botón de cambio de tema usando widget molecular
+          ThemeToggleButton(),
           IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () => _mostrarHistorial(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: () => _mostrarInformacion(context),
+            icon: CustomIcon(icon: Icons.settings),
+            tooltip: 'Configuración',
+            onPressed: null, // Se maneja en el body
           ),
         ],
       ),
       body: const HomeView(),
-    );
-  }
-
-  void _mostrarHistorial(BuildContext context) {
-    // TODO: Implementar navegación al historial
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Historial - En desarrollo')));
-  }
-
-  void _mostrarInformacion(BuildContext context) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Acerca de Bovino IA'),
-            content: const Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bovino IA es una aplicación que utiliza inteligencia artificial para:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 12),
-                Text('• Identificar razas de ganado bovino'),
-                Text('• Estimar el peso del animal'),
-                Text('• Proporcionar características detalladas'),
-                Text('• Mantener un historial de análisis'),
-                SizedBox(height: 16),
-                Text(
-                  'Versión: 1.0.0',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
-              ),
-            ],
-          ),
     );
   }
 }
@@ -78,26 +47,29 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppUIConfig.padding),
       child: Column(
         children: [
           // Header informativo
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppUIConfig.padding),
               child: Column(
                 children: [
-                  Icon(Icons.camera_alt, size: 48, color: AppColors.primary),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Captura una imagen del ganado',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  const CustomIcon(
+                    icon: Icons.camera_alt,
+                    size: 48,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: AppUIConfig.margin),
+                  const TitleText(
+                    text: 'Bovino IA - Reconocimiento de Ganado',
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'La IA analizará la raza y estimará el peso',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(height: AppUIConfig.margin / 2),
+                  const BodyText(
+                    text:
+                        'Utiliza inteligencia artificial para identificar razas bovinas',
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -105,36 +77,31 @@ class HomeView extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppUIConfig.padding * 1.5),
 
-          // Widget de cámara (placeholder)
+          // Botones de navegación
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt, size: 80, color: AppColors.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cámara - En desarrollo',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implementar captura de imagen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Funcionalidad en desarrollo'),
-                        ),
-                      );
-                    },
-                    child: const Text('Simular Análisis'),
-                  ),
-                ],
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CustomButton(
+                  text: 'Iniciar Cámara',
+                  icon: Icons.camera_alt,
+                  onPressed: () => AppRouter.goToCamera(context),
+                ),
+                const SizedBox(height: AppUIConfig.padding),
+                CustomButton(
+                  text: 'Configuración',
+                  icon: Icons.settings,
+                  backgroundColor: AppColors.secondary,
+                  onPressed: () => AppRouter.goToSettings(context),
+                ),
+              ],
             ),
           ),
+
+          // Indicador de tema actual usando widget molecular
+          const ThemeIndicator(),
         ],
       ),
     );

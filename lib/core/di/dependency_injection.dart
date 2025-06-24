@@ -20,6 +20,7 @@ import '../../domain/repositories/bovino_repository.dart';
 // Presentation
 import '../../presentation/blocs/camera_bloc.dart';
 import '../../presentation/blocs/bovino_bloc.dart';
+import '../../presentation/blocs/theme_bloc.dart';
 
 /// Clase para manejo de inyección de dependencias siguiendo Clean Architecture
 class DependencyInjection {
@@ -47,15 +48,15 @@ class DependencyInjection {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          _logger.i('🌐 HTTP Request: \\${options.method} \\${options.path}');
+          _logger.i('🌐 HTTP Request: ${options.method} ${options.path}');
           handler.next(options);
         },
         onResponse: (response, handler) {
-          _logger.i('✅ HTTP Response: \\${response.statusCode}');
+          _logger.i('✅ HTTP Response: ${response.statusCode}');
           handler.next(response);
         },
         onError: (error, handler) {
-          _logger.e('❌ HTTP Error: \\${error.message}');
+          _logger.e('❌ HTTP Error: ${error.message}');
           handler.next(error);
         },
       ),
@@ -72,9 +73,9 @@ class DependencyInjection {
       );
 
       _getIt.registerSingleton<WebSocketChannel>(channel);
-      _logger.i('🔌 WebSocket Connected to \\${AppConstants.websocketUrl}');
+      _logger.i('🔌 WebSocket Connected to ${AppConstants.websocketUrl}');
     } catch (e) {
-      _logger.e('❌ WebSocket Connection Error: \\$e');
+      _logger.e('❌ WebSocket Connection Error: $e');
       // Registrar un WebSocket mock para evitar errores
       _getIt.registerSingleton<WebSocketChannel>(
         WebSocketChannel.connect(Uri.parse('ws://localhost')),
@@ -119,6 +120,8 @@ class DependencyInjection {
     _getIt.registerFactory<BovinoBloc>(
       () => BovinoBloc(repository: repository),
     );
+
+    _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
   }
 
   /// Getters para acceder a las dependencias
@@ -131,6 +134,7 @@ class DependencyInjection {
   static BovinoRepository get repository => _getIt<BovinoRepository>();
   static CameraBloc get cameraBloc => _getIt<CameraBloc>();
   static BovinoBloc get bovinoBloc => _getIt<BovinoBloc>();
+  static ThemeBloc get themeBloc => _getIt<ThemeBloc>();
 
   /// Obtiene todas las dependencias como un mapa (para compatibilidad)
   static Map<String, dynamic> get dependencies => {
@@ -142,6 +146,7 @@ class DependencyInjection {
     'repository': repository,
     'cameraBloc': cameraBloc,
     'bovinoBloc': bovinoBloc,
+    'themeBloc': themeBloc,
   };
 
   /// Limpia las dependencias (útil para testing)
@@ -150,14 +155,14 @@ class DependencyInjection {
       final websocket = _getIt<WebSocketChannel>();
       await websocket.sink.close();
     } catch (e) {
-      _logger.e('Error closing WebSocket: \\$e');
+      _logger.e('Error closing WebSocket: $e');
     }
 
     try {
       final dio = _getIt<Dio>();
       dio.close();
     } catch (e) {
-      _logger.e('Error closing Dio: \\$e');
+      _logger.e('Error closing Dio: $e');
     }
 
     _getIt.reset();

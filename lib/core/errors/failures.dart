@@ -42,6 +42,10 @@ class AnalysisFailure extends Failure {
   const AnalysisFailure({required super.message, super.code});
 }
 
+class ThemeFailure extends Failure {
+  const ThemeFailure({required super.message, super.code});
+}
+
 class UnknownFailure extends Failure {
   const UnknownFailure({required super.message, super.code});
 }
