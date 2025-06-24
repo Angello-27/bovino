@@ -2,7 +2,7 @@
 
 ## 🎯 Objetivo
 
-Este documento define las reglas y convenciones que deben seguir todos los desarrolladores que trabajen en el proyecto Bovino IA, asegurando consistencia, mantenibilidad y calidad del código.
+Este documento define las reglas y convenciones que deben seguir todos los desarrolladores que trabajen en el proyecto Bovino IA, asegurando consistencia, mantenibilidad y calidad del código. **La aplicación está diseñada exclusivamente para Android.**
 
 ## 📝 Nomenclatura y Convenciones
 
@@ -37,10 +37,16 @@ Este documento define las reglas y convenciones que deben seguir todos los desar
 class BovinoEntity extends Equatable {
   final String raza;
   final List<String> caracteristicas;
+  final double confianza;
+  final DateTime timestamp;
+  final double pesoEstimado; // Nuevo campo
   
   const BovinoEntity({
     required this.raza,
     required this.caracteristicas,
+    required this.confianza,
+    required this.timestamp,
+    required this.pesoEstimado,
   });
 }
 
@@ -81,6 +87,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:logger/logger.dart';
+import 'package:dartz/dartz.dart';
 
 // 3. Imports internos (core primero)
 import '../../core/constants/app_constants.dart';
@@ -161,7 +168,7 @@ class UnknownFailure extends Failure {
 }
 ```
 
-### Uso en BLoCs
+### Uso en BLoCs Mejorados
 ```dart
 Future<void> _onAnalizarFrame(
   AnalizarFrameEvent event,
@@ -169,25 +176,35 @@ Future<void> _onAnalizarFrame(
 ) async {
   try {
     emit(BovinoAnalyzing());
+    _logger.i('Analizando frame: ${event.imagePath}');
     
-    final resultado = await _repository.analizarFrame(event.framePath);
+    final resultado = await _repository.analizarFrame(event.imagePath);
     
     resultado.fold(
-      (failure) => emit(BovinoError(failure)),
-      (bovino) => emit(BovinoResult(bovino)),
+      (failure) {
+        _logger.e('Error al analizar frame: ${failure.message}');
+        emit(BovinoError(failure));
+      },
+      (bovino) {
+        _logger.i('Análisis exitoso - Raza: ${bovino.raza}, Peso: ${bovino.pesoFormateado}');
+        emit(BovinoResult(bovino));
+      },
     );
   } catch (e) {
+    _logger.e('Error inesperado en BovinoBloc: $e');
     emit(BovinoError(UnknownFailure(message: e.toString())));
   }
 }
 ```
 
-## 🔧 BLoC Pattern
+## 🔧 BLoC Pattern Mejorado
 
 ### Estructura de BLoCs
 ```dart
 // Events
 abstract class CameraEvent extends Equatable {
+  const CameraEvent();
+
   @override
   List<Object?> get props => [];
 }
@@ -200,6 +217,8 @@ class StopCapture extends CameraEvent {}
 
 // States
 abstract class CameraState extends Equatable {
+  const CameraState();
+
   @override
   List<Object?> get props => [];
 }
@@ -209,6 +228,15 @@ class CameraInitial extends CameraState {}
 class CameraLoading extends CameraState {}
 
 class CameraReady extends CameraState {}
+
+class CameraCapturing extends CameraState {
+  final String lastFramePath;
+  
+  const CameraCapturing(this.lastFramePath);
+  
+  @override
+  List<Object?> get props => [lastFramePath];
+}
 
 class CameraError extends CameraState {
   final Failure failure;
@@ -240,13 +268,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       emit(CameraLoading());
       _logger.i('Inicializando cámara...');
       
-      final success = await _cameraService.initialize();
-      if (success) {
-        emit(CameraReady());
-        _logger.i('Cámara inicializada correctamente');
-      } else {
-        emit(const CameraError(UnknownFailure(message: 'Error al inicializar cámara')));
-      }
+      await _cameraService.initialize();
+      emit(CameraReady());
+      _logger.i('Cámara inicializada correctamente');
     } catch (e) {
       _logger.e('Error al inicializar cámara: $e');
       emit(CameraError(UnknownFailure(message: e.toString())));
@@ -255,7 +279,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 }
 ```
 
-## 🎯 Inyección de Dependencias
+## 🎯 Inyección de Dependencias Modular
 
 ### Registro de Dependencias
 ```dart
@@ -272,6 +296,10 @@ _getIt.registerSingleton<TensorFlowServerDataSource>(
 _getIt.registerFactory<CameraBloc>(
   () => CameraBloc(cameraService: _getIt<CameraService>()),
 );
+_getIt.registerFactory<BovinoBloc>(
+  () => BovinoBloc(repository: _getIt<BovinoRepository>()),
+);
+_getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
 
 // ✅ Lazy Singleton
 _getIt.registerLazySingleton<Repository>(
@@ -350,6 +378,20 @@ Container(
 )
 ```
 
+### Mostrar Información de Bovino
+```dart
+// ✅ Mostrar raza y peso estimado
+Column(
+  children: [
+    Text('Raza: ${bovino.raza}'),
+    Text('Peso estimado: ${bovino.pesoFormateado}'),
+    Text('Peso en libras: ${bovino.pesoEnLibras}'),
+    if (bovino.esPesoNormal)
+      Text('Peso normal', style: TextStyle(color: Colors.green)),
+  ],
+)
+```
+
 ## 🎨 Sistema de Temas
 
 ### Uso de ThemeManager
@@ -410,7 +452,7 @@ try {
 ### Uso del CameraService
 ```dart
 // ✅ Inicializar cámara
-final success = await cameraService.initialize();
+await cameraService.initialize();
 
 // ✅ Iniciar captura de frames
 cameraService.startFrameCapture();
@@ -488,7 +530,7 @@ group('CameraBloc', () {
   
   test('debe emitir CameraReady cuando se inicializa correctamente', () async {
     // Arrange
-    when(mockCameraService.initialize()).thenAnswer((_) async => true);
+    when(mockCameraService.initialize()).thenAnswer((_) async {});
     
     // Act
     cameraBloc.add(InitializeCamera());
@@ -512,20 +554,20 @@ group('CameraBloc', () {
 
 ### Comentarios de Código
 ```dart
-/// Analiza un frame de ganado bovino y retorna información detallada.
+/// Analiza un frame de ganado bovino y retorna información detallada incluyendo peso estimado.
 /// 
 /// [framePath] - Ruta del frame a analizar
 /// 
 /// Retorna un [Either<Failure, BovinoEntity>] donde:
 /// - [Left] contiene un [Failure] si ocurre un error
-/// - [Right] contiene un [BovinoEntity] con el análisis exitoso
+/// - [Right] contiene un [BovinoEntity] con el análisis exitoso incluyendo peso estimado
 /// 
 /// Ejemplo de uso:
 /// ```dart
 /// final resultado = await repository.analizarFrame('path/to/frame.jpg');
 /// resultado.fold(
 ///   (failure) => print('Error: ${failure.message}'),
-///   (bovino) => print('Raza: ${bovino.raza}'),
+///   (bovino) => print('Raza: ${bovino.raza}, Peso: ${bovino.pesoFormateado}'),
 /// );
 /// ```
 Future<Either<Failure, BovinoEntity>> analizarFrame(String framePath);
@@ -540,12 +582,13 @@ Future<Either<Failure, BovinoEntity>> analizarFrame(String framePath);
 /// - Recepción de notificaciones via WebSocket
 /// - Manejo de errores de conexión
 /// - Verificación de estado del servidor
+/// - Análisis de peso estimado del bovino
 abstract class TensorFlowServerDataSource {
   /// Envía un frame al servidor para análisis.
   /// 
   /// [framePath] - Ruta del frame a enviar
   /// 
-  /// Retorna un [BovinoModel] con la información analizada.
+  /// Retorna un [BovinoModel] con la información analizada incluyendo peso estimado.
   /// 
   /// Lanza [NetworkFailure] si hay problemas de conexión.
   Future<BovinoModel> analizarFrame(String framePath);
@@ -564,7 +607,7 @@ abstract class TensorFlowServerDataSource {
 
 ### Convenciones de Commits
 ```
-feat: agregar análisis de frames en tiempo real
+feat: agregar análisis de frames con peso estimado
 fix: corregir error en conexión WebSocket
 docs: actualizar documentación de API
 refactor: simplificar lógica de cámara
@@ -630,6 +673,20 @@ void main() {
 }
 ```
 
+## 📱 Compatibilidad Android
+
+### Configuración Específica
+- **API mínima**: 21 (Android 5.0)
+- **API objetivo**: 34 (Android 14)
+- **Permisos**: Cámara, Almacenamiento
+- **Características**: Cámara, Internet
+
+### Optimizaciones Android
+- **ProGuard/R8** habilitado para release
+- **Multidex** habilitado
+- **Splash screen** nativo
+- **Iconos adaptativos**
+
 ---
 
-*Estas reglas deben ser seguidas por todos los desarrolladores para mantener la consistencia y calidad del código.* 
+*Estas reglas deben ser seguidas por todos los desarrolladores para mantener la consistencia y calidad del código, optimizado para Android.* 

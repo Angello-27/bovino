@@ -2,7 +2,7 @@
 
 ## 🎯 Objetivo Principal
 
-**Bovino IA** es una aplicación móvil que captura frames de la cámara en tiempo real y los envía a un servidor Python con TensorFlow para el reconocimiento automático de razas bovinas, recibiendo notificaciones asíncronas con los resultados.
+**Bovino IA** es una aplicación móvil **Android** que captura frames de la cámara en tiempo real y los envía a un servidor Python con TensorFlow para el reconocimiento automático de razas bovinas y estimación de peso, recibiendo notificaciones asíncronas con los resultados.
 
 ## 🏛️ Principios Arquitectónicos
 
@@ -38,9 +38,14 @@ lib/
 │   ├── constants/          # Constantes globales
 │   │   ├── app_constants.dart      # Configuración general y endpoints
 │   │   ├── app_colors.dart         # Colores del sistema de diseño
-│   │   └── app_messages.dart       # Mensajes de la aplicación
-│   ├── di/                 # Inyección de dependencias
-│   │   └── dependency_injection.dart
+│   │   └── app_messages.dart       # Mensajes centralizados de la aplicación
+│   ├── di/                 # Inyección de dependencias modular
+│   │   ├── dependency_injection.dart    # Coordinador principal
+│   │   ├── http_injection.dart          # Configuración HTTP
+│   │   ├── websocket_injection.dart     # Configuración WebSocket
+│   │   ├── services_injection.dart      # Servicios core
+│   │   ├── data_injection.dart          # Capa de datos
+│   │   └── presentation_injection.dart  # Capa de presentación
 │   ├── errors/             # Manejo de errores
 │   │   └── failures.dart
 │   ├── routes/             # Navegación
@@ -60,21 +65,26 @@ lib/
 │   │       ├── tensorflow_server_datasource.dart      # Contrato abstracto
 │   │       └── tensorflow_server_datasource_impl.dart # Implementación concreta
 │   ├── models/             # Modelos de datos
-│   │   └── bovino_model.dart
+│   │   └── bovino_model.dart       # Incluye peso estimado
 │   └── repositories/       # Implementaciones
 │       └── bovino_repository_impl.dart
 ├── domain/                 # 🎯 Capa de Dominio
 │   ├── entities/           # Entidades de negocio
-│   │   └── bovino_entity.dart
+│   │   └── bovino_entity.dart      # Incluye peso estimado y getters útiles
 │   └── repositories/       # Contratos
 │       └── bovino_repository.dart
 └── presentation/           # 🎨 Capa de Presentación
-    ├── blocs/              # Gestión de estado
-    │   ├── camera_bloc.dart        # BLoC para cámara
-    │   └── bovino_bloc.dart        # BLoC para análisis bovino
+    ├── blocs/              # Gestión de estado mejorada
+    │   ├── camera_bloc.dart        # BLoC para cámara con lógica real
+    │   ├── bovino_bloc.dart        # BLoC para análisis bovino con Either
+    │   └── theme_bloc.dart         # BLoC para temas dinámicos
     ├── pages/              # Páginas principales
-    │   └── home_page.dart
-    └── widgets/            # Componentes UI
+    │   ├── home_page.dart
+    │   ├── camera_page.dart
+    │   ├── settings_page.dart
+    │   └── not_found_page.dart
+    └── widgets/            # Componentes UI siguiendo Atomic Design
+        ├── atoms/          # Componentes básicos
         ├── molecules/      # Componentes compuestos
         └── organisms/      # Componentes complejos
 ```
@@ -86,7 +96,7 @@ lib/
 Cámara → CameraService → CameraBloc → UI
 ```
 
-### 2. **Análisis de Frames**
+### 2. **Análisis de Frames con Peso Estimado**
 ```
 Frame → TensorFlowServerDataSourceImpl → BovinoRepository → BovinoBloc → UI
 ```
@@ -103,13 +113,16 @@ Servidor → WebSocket → BovinoBloc → UI
 - **Independencia** de implementaciones específicas
 - **Testabilidad** mediante mocks
 
-### 2. **BLoC Pattern**
-- **Gestión de estado** centralizada
+### 2. **BLoC Pattern Mejorado**
+- **Gestión de estado** centralizada con Equatable
 - **Eventos** para acciones del usuario
 - **Estados** para representar la UI
+- **Logging profesional** integrado
+- **Manejo de errores** con Failure objects
 
-### 3. **Dependency Injection**
+### 3. **Dependency Injection Modular**
 - **GetIt** para gestión de dependencias
+- **Módulos separados** por responsabilidad
 - **Inversión de control**
 - **Testabilidad** mejorada
 
@@ -126,12 +139,13 @@ Servidor → WebSocket → BovinoBloc → UI
 ### Core
 - **Flutter**: Framework de desarrollo
 - **Dart**: Lenguaje de programación
-- **GetIt**: Inyección de dependencias
+- **GetIt**: Inyección de dependencias modular
 - **Logger**: Sistema de logging profesional
 
 ### Estado y Navegación
-- **flutter_bloc**: Gestión de estado
+- **flutter_bloc**: Gestión de estado reactiva
 - **go_router**: Navegación declarativa
+- **equatable**: Comparación eficiente de objetos
 
 ### Comunicación
 - **Dio**: Cliente HTTP con interceptores
@@ -142,7 +156,7 @@ Servidor → WebSocket → BovinoBloc → UI
 - **permission_handler**: Sistema de permisos robusto
 
 ### Utilidades
-- **dartz**: Programación funcional
+- **dartz**: Programación funcional (Either/Left/Right)
 - **equatable**: Comparación de objetos
 
 ## 📊 Estructura de Datos
@@ -154,20 +168,27 @@ class BovinoEntity {
   final List<String> caracteristicas;
   final double confianza;
   final DateTime timestamp;
+  final double pesoEstimado; // Nuevo campo
+  
+  // Getters útiles
+  String get pesoFormateado => '${pesoEstimado.toStringAsFixed(1)} kg';
+  String get pesoEnLibras => '${(pesoEstimado * 2.20462).toStringAsFixed(1)} lbs';
+  bool get esPesoNormal => pesoEstimado >= 300 && pesoEstimado <= 800;
 }
 ```
 
-### Estados de BLoC
+### Estados de BLoC Mejorados
 ```dart
 // CameraBloc States
-abstract class CameraState {}
+abstract class CameraState extends Equatable {}
 class CameraInitial extends CameraState {}
 class CameraLoading extends CameraState {}
 class CameraReady extends CameraState {}
+class CameraCapturing extends CameraState {}
 class CameraError extends CameraState {}
 
 // BovinoBloc States
-abstract class BovinoState {}
+abstract class BovinoState extends Equatable {}
 class BovinoInitial extends BovinoState {}
 class BovinoAnalyzing extends BovinoState {}
 class BovinoResult extends BovinoState {}
@@ -177,23 +198,23 @@ class BovinoError extends BovinoState {}
 ## 🎯 Responsabilidades por Capa
 
 ### Core
-- **Constantes**: Configuración global centralizada
-- **DI**: Gestión de dependencias con GetIt
-- **Errores**: Manejo centralizado con Failures
+- **Constantes**: Configuración global centralizada con AppMessages
+- **DI**: Gestión modular de dependencias con GetIt
+- **Errores**: Manejo centralizado con Failures tipados
 - **Servicios**: Funcionalidades core optimizadas
 - **Temas**: Sistema de diseño avanzado
 
 ### Data
 - **Datasources**: Comunicación con APIs y WebSocket
-- **Models**: Representación de datos
+- **Models**: Representación de datos con validaciones
 - **Repositories**: Implementación de contratos
 
 ### Domain
-- **Entities**: Entidades de negocio inmutables
+- **Entities**: Entidades de negocio inmutables con getters útiles
 - **Repositories**: Contratos de datos
 
 ### Presentation
-- **BLoCs**: Gestión de estado reactiva
+- **BLoCs**: Gestión de estado reactiva con logging profesional
 - **Pages**: Páginas principales
 - **Widgets**: Componentes UI reutilizables
 
@@ -208,7 +229,7 @@ main() → DependencyInjection.initialize() → App
 ```
 HomePage → CameraBloc → CameraService → Frame Capture
 Frame → BovinoBloc → Repository → TensorFlowServerDataSourceImpl
-Server → WebSocket → BovinoBloc → UI Update
+Server → WebSocket → BovinoBloc → UI Update (incluyendo peso estimado)
 ```
 
 ### 3. **Manejo de Errores**
@@ -265,16 +286,17 @@ await cameraService.initialize();
 cameraService.startFrameCapture();
 ```
 
-## 🔌 Inyección de Dependencias
+## 🔌 Inyección de Dependencias Modular
 
 ### Características
 - **GetIt** como contenedor IoC
+- **Módulos separados** por responsabilidad
 - **Logger** para debugging profesional
 - **Interceptores HTTP** para logging
 - **WebSocket** con manejo de errores
 - **Registro de dependencias** organizado
 
-### Estructura
+### Estructura Modular
 ```dart
 // Servicios core
 _getIt.registerSingleton<CameraService>(CameraService());
@@ -285,21 +307,26 @@ _getIt.registerSingleton<TensorFlowServerDataSource>(
   TensorFlowServerDataSourceImpl(dio, websocket),
 );
 
-// BLoCs
+// BLoCs con Factory pattern
 _getIt.registerFactory<CameraBloc>(
   () => CameraBloc(cameraService: cameraService),
 );
+_getIt.registerFactory<BovinoBloc>(
+  () => BovinoBloc(repository: repository),
+);
+_getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
 ```
 
 ## 📱 Compatibilidad
 
 ### Plataformas Soportadas
-- ✅ Android (API 21+)
+- ✅ **Android (API 21+)**
 
 ### Configuración del Servidor
 - **URL**: `http://192.168.0.8:8000`
 - **WebSocket**: `ws://192.168.0.8:8000/ws`
 - **Endpoints**: `/analyze-frame`, `/health`
+- **Respuesta**: Incluye `peso_estimado` en kg
 
 ## 🧪 Testing
 
@@ -314,6 +341,27 @@ _getIt.registerFactory<CameraBloc>(
 - **Tests críticos** para lógica de negocio
 - **Tests de UI** para componentes principales
 
+## 🔄 Mejoras Recientes
+
+### BLoCs Mejorados
+- ✅ **Equatable** para comparaciones eficientes
+- ✅ **Logging profesional** integrado
+- ✅ **Manejo de errores** con Failure objects
+- ✅ **Either/Left/Right** para programación funcional
+- ✅ **Métodos privados** para cada evento
+
+### Peso Estimado
+- ✅ **Campo agregado** a BovinoEntity y BovinoModel
+- ✅ **Getters útiles** para formateo
+- ✅ **Validaciones** en fromJson
+- ✅ **Soporte completo** en toda la arquitectura
+
+### Inyección de Dependencias
+- ✅ **Módulos separados** por responsabilidad
+- ✅ **Factory pattern** para BLoCs
+- ✅ **Singleton** para servicios
+- ✅ **Lazy loading** donde corresponde
+
 ---
 
-*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern y SOLID Principles.* 
+*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern y SOLID Principles, optimizada para Android.* 
