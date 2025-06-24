@@ -49,6 +49,7 @@ class DependencyInjection {
   // Services
   static get cameraService => ServicesInjection.cameraService;
   static get permissionService => ServicesInjection.permissionService;
+  static get splashService => ServicesInjection.splashService;
 
   // Data
   static get remoteDataSource => DataInjection.remoteDataSource;
@@ -58,6 +59,7 @@ class DependencyInjection {
   static get cameraBloc => PresentationInjection.cameraBloc;
   static get bovinoBloc => PresentationInjection.bovinoBloc;
   static get themeBloc => PresentationInjection.themeBloc;
+  static get splashBloc => PresentationInjection.splashBloc;
 
   /// Limpia todas las dependencias
   static Future<void> dispose() async {

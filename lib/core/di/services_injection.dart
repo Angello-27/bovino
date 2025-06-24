@@ -4,6 +4,7 @@ import 'package:logger/logger.dart';
 // Core Services
 import '../services/camera_service.dart';
 import '../services/permission_service.dart';
+import '../services/splash_service.dart';
 
 /// Módulo para inyección de servicios core
 /// Sigue Clean Architecture y separación de responsabilidades
@@ -15,6 +16,7 @@ class ServicesInjection {
   static Future<void> setup() async {
     _getIt.registerSingleton<CameraService>(CameraService());
     _getIt.registerSingleton<PermissionService>(PermissionService());
+    _getIt.registerSingleton<SplashService>(SplashService());
 
     _logger.i('🔧 Core Services configured successfully');
   }
@@ -24,4 +26,7 @@ class ServicesInjection {
 
   /// Obtiene la instancia de PermissionService
   static PermissionService get permissionService => _getIt<PermissionService>();
+
+  /// Obtiene la instancia de SplashService
+  static SplashService get splashService => _getIt<SplashService>();
 }

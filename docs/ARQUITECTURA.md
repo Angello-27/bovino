@@ -30,6 +30,13 @@
 - **Repositorios** como abstracción de datos
 - **Servicios de dominio** para lógica compleja
 
+### 5. **Atomic Design**
+- **Atoms**: Componentes básicos reutilizables
+- **Molecules**: Componentes compuestos
+- **Organisms**: Componentes complejos
+- **Screens**: Pantallas reutilizables
+- **Separación clara** de responsabilidades
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -52,7 +59,8 @@ lib/
 │   │   └── app_router.dart
 │   ├── services/           # Servicios core
 │   │   ├── camera_service.dart     # Servicio de cámara optimizado
-│   │   └── permission_service.dart # Sistema de permisos
+│   │   ├── permission_service.dart # Sistema de permisos
+│   │   └── splash_service.dart     # Servicio de splash screen
 │   └── theme/              # Sistema de temas avanzado
 │       ├── app_theme.dart          # Fábrica de temas
 │       ├── dark_theme.dart         # Tema oscuro
@@ -77,31 +85,58 @@ lib/
     ├── blocs/              # Gestión de estado mejorada
     │   ├── camera_bloc.dart        # BLoC para cámara con lógica real
     │   ├── bovino_bloc.dart        # BLoC para análisis bovino con Either
-    │   └── theme_bloc.dart         # BLoC para temas dinámicos
+    │   ├── theme_bloc.dart         # BLoC para temas dinámicos
+    │   └── splash_bloc.dart        # BLoC para splash screen
     ├── pages/              # Páginas principales
-    │   ├── home_page.dart
-    │   ├── camera_page.dart
-    │   ├── settings_page.dart
-    │   └── not_found_page.dart
+    │   ├── splash_page.dart        # Página de splash con animaciones
+    │   ├── home_page.dart          # Página principal
+    │   ├── camera_page.dart        # Página de cámara
+    │   ├── settings_page.dart      # Página de configuración
+    │   └── not_found_page.dart     # Página 404
     └── widgets/            # Componentes UI siguiendo Atomic Design
         ├── atoms/          # Componentes básicos
+        │   ├── custom_text.dart           # Textos personalizados
+        │   ├── custom_button.dart         # Botones personalizados
+        │   ├── custom_icon.dart           # Iconos personalizados
+        │   └── bovino_breed_card.dart     # Tarjetas de razas
         ├── molecules/      # Componentes compuestos
-        └── organisms/      # Componentes complejos
+        │   ├── home_header.dart           # Encabezado principal
+        │   ├── stats_card.dart            # Tarjetas de estadísticas
+        │   ├── breeds_list.dart           # Lista de razas
+        │   ├── theme_toggle_button.dart   # Botón de cambio de tema
+        │   ├── theme_indicator.dart       # Indicador de tema
+        │   └── theme_error_widget.dart    # Widget de error de tema
+        ├── organisms/      # Componentes complejos
+        │   ├── app_bar_organism.dart      # Barra superior
+        │   ├── bottom_navigation_organism.dart # Navegación inferior
+        │   ├── home_content_organism.dart # Contenido principal
+        │   ├── camera_capture_organism.dart # Captura de cámara
+        │   ├── camera_view_organism.dart  # Vista de cámara
+        │   ├── settings_view_organism.dart # Vista de configuración
+        │   └── error_display.dart         # Organismo de errores
+        └── screens/        # Pantallas reutilizables
+            ├── screen_home.dart           # Screen para página principal
+            └── screen_camera.dart         # Screen para página de cámara
 ```
 
 ## 🔄 Flujo de Datos
 
-### 1. **Captura de Frames**
+### 1. **Splash Screen**
+```
+Inicio → SplashService → SplashBloc → SplashPage → HomePage
+```
+
+### 2. **Captura de Frames**
 ```
 Cámara → CameraService → CameraBloc → UI
 ```
 
-### 2. **Análisis de Frames con Peso Estimado**
+### 3. **Análisis de Frames con Peso Estimado**
 ```
 Frame → TensorFlowServerDataSourceImpl → BovinoRepository → BovinoBloc → UI
 ```
 
-### 3. **Notificaciones Asíncronas**
+### 4. **Notificaciones Asíncronas**
 ```
 Servidor → WebSocket → BovinoBloc → UI
 ```
@@ -133,6 +168,12 @@ Servidor → WebSocket → BovinoBloc → UI
 ### 5. **Factory Pattern**
 - **ThemeFactory** para creación de estilos
 - **DependencyInjection** para creación de servicios
+
+### 6. **Atomic Design**
+- **Atoms**: Componentes básicos reutilizables
+- **Molecules**: Componentes compuestos
+- **Organisms**: Componentes complejos
+- **Screens**: Pantallas reutilizables
 
 ## 🔧 Tecnologías y Dependencias
 
@@ -193,6 +234,14 @@ class BovinoInitial extends BovinoState {}
 class BovinoAnalyzing extends BovinoState {}
 class BovinoResult extends BovinoState {}
 class BovinoError extends BovinoState {}
+
+// SplashBloc States
+abstract class SplashState extends Equatable {}
+class SplashInitial extends SplashState {}
+class SplashLoading extends SplashState {}
+class SplashCheckingServer extends SplashState {}
+class SplashReady extends SplashState {}
+class SplashError extends SplashState {}
 ```
 
 ## 🎯 Responsabilidades por Capa
@@ -215,8 +264,12 @@ class BovinoError extends BovinoState {}
 
 ### Presentation
 - **BLoCs**: Gestión de estado reactiva con logging profesional
-- **Pages**: Páginas principales
-- **Widgets**: Componentes UI reutilizables
+- **Pages**: Páginas principales con lógica de negocio
+- **Widgets**: Componentes UI organizados por Atomic Design
+  - **Atoms**: Componentes básicos reutilizables
+  - **Molecules**: Componentes compuestos
+  - **Organisms**: Componentes complejos
+  - **Screens**: Pantallas reutilizables
 
 ## 🔄 Ciclo de Vida de la Aplicación
 
@@ -227,7 +280,9 @@ main() → DependencyInjection.initialize() → App
 
 ### 2. **Flujo Principal**
 ```
-HomePage → CameraBloc → CameraService → Frame Capture
+SplashPage → SplashBloc → SplashService → Verificación de servidor
+HomePage → ScreenHome → Organisms → Molecules → Atoms
+CameraPage → ScreenCamera → CameraBloc → CameraService → Frame Capture
 Frame → BovinoBloc → Repository → TensorFlowServerDataSourceImpl
 Server → WebSocket → BovinoBloc → UI Update (incluyendo peso estimado)
 ```
@@ -236,6 +291,27 @@ Server → WebSocket → BovinoBloc → UI Update (incluyendo peso estimado)
 ```
 Error → Failure → BLoC → UI Error State
 ```
+
+## 🚀 Splash Screen Nativo
+
+### Características
+- **Configuración nativa** en Android (`launch_background.xml`)
+- **Animaciones fluidas** con AnimationController
+- **Estados reactivos** con BLoC
+- **Verificación automática** de servidor
+- **Transición suave** a la aplicación principal
+
+### Arquitectura del Splash
+```
+SplashPage → SplashBloc → SplashService → Verificación → Navegación
+```
+
+### Estados del Splash
+- **SplashInitial**: Estado inicial
+- **SplashLoading**: Cargando recursos
+- **SplashCheckingServer**: Verificando servidor
+- **SplashReady**: Listo para navegar
+- **SplashError**: Error en el proceso
 
 ## 🎨 Sistema de Temas
 
@@ -301,6 +377,7 @@ cameraService.startFrameCapture();
 // Servicios core
 _getIt.registerSingleton<CameraService>(CameraService());
 _getIt.registerSingleton<PermissionService>(PermissionService());
+_getIt.registerSingleton<SplashService>(SplashService());
 
 // Datasources
 _getIt.registerSingleton<TensorFlowServerDataSource>(
@@ -315,6 +392,9 @@ _getIt.registerFactory<BovinoBloc>(
   () => BovinoBloc(repository: repository),
 );
 _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
+_getIt.registerFactory<SplashBloc>(
+  () => SplashBloc(splashService: splashService),
+);
 ```
 
 ## 📱 Compatibilidad
@@ -343,6 +423,20 @@ _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
 
 ## 🔄 Mejoras Recientes
 
+### Splash Screen Nativo
+- ✅ **Configuración nativa** en Android
+- ✅ **Animaciones fluidas** con AnimationController
+- ✅ **Estados reactivos** con BLoC
+- ✅ **Verificación de servidor** automática
+- ✅ **Transición suave** a la aplicación
+
+### Atomic Design Completo
+- ✅ **Atoms** implementados completamente
+- ✅ **Molecules** organizados por funcionalidad
+- ✅ **Organisms** para componentes complejos
+- ✅ **Screens** para pantallas reutilizables
+- ✅ **Separación clara** de responsabilidades
+
 ### BLoCs Mejorados
 - ✅ **Equatable** para comparaciones eficientes
 - ✅ **Logging profesional** integrado
@@ -362,6 +456,12 @@ _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
 - ✅ **Singleton** para servicios
 - ✅ **Lazy loading** donde corresponde
 
+### Estructura de Screens
+- ✅ **Screens** en lugar de templates
+- ✅ **Prefijo screen_** para archivos
+- ✅ **Sin conflictos** con IDE
+- ✅ **Mejor análisis** de código
+
 ---
 
-*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern y SOLID Principles, optimizada para Android.* 
+*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern, Atomic Design y SOLID Principles, optimizada para Android.* 

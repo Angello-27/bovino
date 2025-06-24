@@ -19,6 +19,8 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 - 🎯 **Arquitectura limpia** siguiendo Clean Architecture + BLoC
 - 📊 **Logging profesional** para debugging
 - 🔧 **Inyección de dependencias modular**
+- 🚀 **Splash screen nativo** con animaciones fluidas
+- 🏗️ **Atomic Design** implementado completamente
 
 ## 🏗️ Arquitectura
 
@@ -39,7 +41,7 @@ lib/
 │   │   ├── data_injection.dart          # Capa de datos
 │   │   └── presentation_injection.dart  # Capa de presentación
 │   ├── errors/             # Manejo de errores tipados
-│   ├── services/           # Servicios core (cámara, permisos)
+│   ├── services/           # Servicios core (cámara, permisos, splash)
 │   ├── theme/              # Sistema de temas avanzado
 │   └── routes/             # Manejo de rutas
 ├── data/                   # 📊 Capa de Datos
@@ -53,29 +55,79 @@ lib/
     ├── blocs/              # Gestión de estado mejorada
     │   ├── camera_bloc.dart        # BLoC para cámara con lógica real
     │   ├── bovino_bloc.dart        # BLoC para análisis con Either
-    │   └── theme_bloc.dart         # BLoC para temas dinámicos
+    │   ├── theme_bloc.dart         # BLoC para temas dinámicos
+    │   └── splash_bloc.dart        # BLoC para splash screen
     ├── pages/              # Páginas de la aplicación
+    │   ├── splash_page.dart        # Página de splash con animaciones
+    │   ├── home_page.dart          # Página principal
+    │   ├── camera_page.dart        # Página de cámara
+    │   ├── settings_page.dart      # Página de configuración
+    │   └── not_found_page.dart     # Página 404
     └── widgets/            # Widgets organizados por Atomic Design
         ├── atoms/          # Componentes básicos
         ├── molecules/      # Componentes compuestos
-        └── organisms/      # Componentes complejos
+        ├── organisms/      # Componentes complejos
+        └── screens/        # Pantallas reutilizables
+            ├── screen_home.dart    # Screen para página principal
+            └── screen_camera.dart  # Screen para página de cámara
 ```
 
-## 🎨 Atomic Design
+## 🎨 Atomic Design Implementado
 
-Los widgets están organizados siguiendo **Atomic Design**:
+Los widgets están organizados siguiendo **Atomic Design** de manera completa:
 
-- **Atoms**: Botones, textos, iconos básicos
-- **Molecules**: Diálogos de permisos, displays de resultados
-- **Organisms**: Widget de cámara en vivo, secciones complejas
+### **Atoms** (Componentes Básicos)
+- `CustomText` - Textos con diferentes estilos (Title, Subtitle, Body, Caption)
+- `CustomButton` - Botones con diferentes variantes
+- `CustomIcon` - Iconos personalizados
+- `BovinoBreedCard` - Tarjetas de razas bovinas
+
+### **Molecules** (Componentes Compuestos)
+- `HomeHeader` - Encabezado de la página principal
+- `StatsCard` - Tarjetas de estadísticas
+- `BreedsList` - Lista de razas bovinas
+- `ThemeToggleButton` - Botón de cambio de tema
+- `ThemeIndicator` - Indicador de tema actual
+- `ThemeErrorWidget` - Widget de error de tema
+
+### **Organisms** (Componentes Complejos)
+- `AppBarOrganism` - Barra superior de la aplicación
+- `BottomNavigationOrganism` - Navegación inferior
+- `HomeContentOrganism` - Contenido principal de la página de inicio
+- `CameraCaptureOrganism` - Organismo de captura de cámara
+- `CameraViewOrganism` - Vista de cámara
+- `SettingsViewOrganism` - Vista de configuración
+- `ErrorDisplay` - Organismo para mostrar errores
+
+### **Screens** (Pantallas Reutilizables)
+- `ScreenHome` - Pantalla principal con navegación
+- `ScreenCamera` - Pantalla de captura de cámara
+
+## 🚀 Splash Screen Nativo
+
+### **Características del Splash:**
+- **Nativo Android:** Configuración en `launch_background.xml`
+- **Animaciones fluidas:** Fade, scale y transiciones suaves
+- **Estados reactivos:** Loading, checking server, ready, error
+- **Verificación de servidor:** Conexión automática al servidor TensorFlow
+- **Duración mínima:** 2 segundos para experiencia consistente
+
+### **Flujo del Splash:**
+1. **Inicio:** Logo animado con fade y scale
+2. **Carga:** "Iniciando aplicación..."
+3. **Verificación:** "Verificando conexión al servidor..."
+4. **Listo:** "Servidor conectado" o "Servidor no disponible"
+5. **Navegación:** Transición automática a HomePage
 
 ## 🎯 Principios Aplicados
 
-- **Clean Architecture**: Separación clara de responsabilidades
-- **SOLID Principles**: Principios de diseño orientado a objetos
-- **BLoC Pattern Mejorado**: Gestión de estado reactiva con Equatable
-- **Domain-Driven Design**: Entidades de dominio bien definidas
-- **Programación Funcional**: Uso de Either/Left/Right para manejo de errores
+- **Clean Architecture:** Separación clara de responsabilidades
+- **SOLID Principles:** Principios de diseño orientado a objetos
+- **BLoC Pattern Mejorado:** Gestión de estado reactiva con Equatable
+- **Domain-Driven Design:** Entidades de dominio bien definidas
+- **Programación Funcional:** Uso de Either/Left/Right para manejo de errores
+- **Atomic Design:** Componentes organizados por complejidad
+- **Dependency Injection Modular:** Inyección de dependencias con GetIt
 
 ## ⚙️ Configuración
 
@@ -109,14 +161,16 @@ flutter run
 ## 📱 Uso
 
 ### Flujo de Funcionamiento
-1. **Iniciar cámara**: La aplicación abre la cámara en tiempo real
-2. **Captura automática**: Se capturan frames cada X segundos
-3. **Envío al servidor**: Los frames se envían al servidor TensorFlow
-4. **Análisis remoto**: El servidor procesa la imagen con TensorFlow
-5. **Notificación**: El servidor envía el resultado via WebSocket
-6. **Visualización**: Se muestra la raza identificada, peso estimado y características
+1. **Splash Screen:** Animación de inicio y verificación de servidor
+2. **Iniciar cámara**: La aplicación abre la cámara en tiempo real
+3. **Captura automática**: Se capturan frames cada X segundos
+4. **Envío al servidor**: Los frames se envían al servidor TensorFlow
+5. **Análisis remoto**: El servidor procesa la imagen con TensorFlow
+6. **Notificación**: El servidor envía el resultado via WebSocket
+7. **Visualización**: Se muestra la raza identificada, peso estimado y características
 
 ### Interfaz
+- **Splash screen**: Animación de inicio con verificación de conexión
 - **Pantalla principal**: Cámara en vivo con overlay de resultados
 - **Indicadores**: Estado de conexión, análisis en progreso
 - **Resultados**: Raza identificada, peso estimado y características del bovino
@@ -144,6 +198,7 @@ flutter run
 - **Dependency Injection Modular**: Inyección de dependencias con GetIt
 - **Repository Pattern**: Patrón de repositorio
 - **BLoC Pattern Mejorado**: Gestión de estado con logging profesional
+- **Atomic Design**: Componentes organizados por complejidad
 
 ## 📊 Estructura de Datos
 
@@ -167,6 +222,7 @@ class BovinoEntity {
 - `CameraBloc`: Gestión de cámara con lógica real y logging
 - `BovinoBloc`: Gestión de análisis con Either/Left/Right
 - `ThemeBloc`: Gestión de temas dinámicos
+- `SplashBloc`: Gestión de splash screen con verificación de servidor
 
 ## 🔧 Configuración Avanzada
 
@@ -177,12 +233,15 @@ await DependencyInjection.initialize();
 
 // Acceso a dependencias
 final cameraService = DependencyInjection.cameraService;
+final splashService = DependencyInjection.splashService;
 final bovinoBloc = DependencyInjection.bovinoBloc;
+final splashBloc = DependencyInjection.splashBloc;
 ```
 
 ### Navegación
 ```dart
 // Navegación simple
+AppRouter.goToSplash(context);
 AppRouter.goToHome(context);
 ```
 
@@ -193,6 +252,13 @@ final theme = ThemeManager.getThemeByBool(false); // Tema claro
 ```
 
 ## 🚀 Características Técnicas
+
+### Splash Screen Nativo
+- Configuración nativa en Android
+- Animaciones fluidas con AnimationController
+- Estados reactivos con BLoC
+- Verificación automática de servidor
+- Transición suave a la aplicación principal
 
 ### Cámara en Tiempo Real
 - Captura automática de frames
@@ -218,6 +284,13 @@ final theme = ThemeManager.getThemeByBool(false); // Tema claro
 - **Manejo de errores** con Failure objects
 - **Either/Left/Right** para programación funcional
 - **Métodos privados** para cada evento
+
+### Atomic Design
+- **Atoms**: Componentes básicos reutilizables
+- **Molecules**: Componentes compuestos
+- **Organisms**: Componentes complejos
+- **Screens**: Pantallas reutilizables
+- **Separación clara** de responsabilidades
 
 ## 📱 Compatibilidad
 
@@ -249,6 +322,20 @@ test/
 
 ## 🔄 Mejoras Recientes
 
+### Splash Screen Nativo
+- ✅ **Configuración nativa** en Android
+- ✅ **Animaciones fluidas** con AnimationController
+- ✅ **Estados reactivos** con BLoC
+- ✅ **Verificación de servidor** automática
+- ✅ **Transición suave** a la aplicación
+
+### Atomic Design Completo
+- ✅ **Atoms** implementados completamente
+- ✅ **Molecules** organizados por funcionalidad
+- ✅ **Organisms** para componentes complejos
+- ✅ **Screens** para pantallas reutilizables
+- ✅ **Separación clara** de responsabilidades
+
 ### BLoCs Mejorados
 - ✅ **Equatable** para comparaciones eficientes
 - ✅ **Logging profesional** integrado
@@ -267,6 +354,12 @@ test/
 - ✅ **Factory pattern** para BLoCs
 - ✅ **Singleton** para servicios
 - ✅ **Lazy loading** donde corresponde
+
+### Estructura de Screens
+- ✅ **Screens** en lugar de templates
+- ✅ **Prefijo screen_** para archivos
+- ✅ **Sin conflictos** con IDE
+- ✅ **Mejor análisis** de código
 
 ## 📄 Documentación
 
@@ -287,4 +380,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ---
 
-*Desarrollado con ❤️ siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern y SOLID Principles, optimizado para Android.* 
+*Desarrollado con ❤️ siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern, Atomic Design y SOLID Principles, optimizado para Android.* 

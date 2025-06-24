@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// Core
-import '../../../core/constants/app_colors.dart';
-
-// Presentation
+// BLoC
 import '../../blocs/theme_bloc.dart';
 
 /// Widget molecular para el botón de cambio de tema
@@ -84,7 +81,7 @@ class ThemeInfoCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(10),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),

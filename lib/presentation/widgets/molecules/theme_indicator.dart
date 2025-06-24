@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-// Presentation
-import '../../blocs/theme_bloc.dart';
 
 // Atoms
-import '../atoms/custom_icon.dart';
 import '../atoms/custom_text.dart';
+import '../../../core/constants/app_colors.dart';
 
 /// Widget molecular para mostrar el indicador de tema actual
 class ThemeIndicator extends StatelessWidget {
@@ -31,46 +27,39 @@ class ThemeIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ThemeBloc, ThemeState>(
-      builder: (context, state) {
-        if (state is ThemeLoaded) {
-          final currentMargin = margin ?? const EdgeInsets.only(top: 16);
-          final currentPadding = padding ?? const EdgeInsets.all(8);
-          final currentBorderRadius = borderRadius ?? 8.0;
-          final currentBackgroundColor =
-              backgroundColor ?? Theme.of(context).colorScheme.surfaceVariant;
-          final currentTextColor =
-              textColor ?? Theme.of(context).colorScheme.onSurfaceVariant;
-          final currentIconSize = iconSize ?? 16.0;
-          final currentFontSize = fontSize ?? 12.0;
-
-          return Container(
-            padding: currentPadding,
-            margin: currentMargin,
-            decoration: BoxDecoration(
-              color: currentBackgroundColor,
-              borderRadius: BorderRadius.circular(currentBorderRadius),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomIcon(
-                  icon: state.isDark ? Icons.dark_mode : Icons.light_mode,
-                  size: currentIconSize,
-                  color: currentTextColor,
-                ),
-                const SizedBox(width: 8),
-                CaptionText(
-                  text: 'Tema: ${state.themeName}',
-                  color: currentTextColor,
-                  fontSize: currentFontSize,
-                ),
-              ],
-            ),
-          );
-        }
-        return const SizedBox.shrink();
-      },
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      margin: margin ?? const EdgeInsets.only(top: 16),
+      padding:
+          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(borderRadius ?? 20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 30),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isDark ? Icons.nightlight_round : Icons.wb_sunny,
+            color: isDark ? AppColors.primary : AppColors.secondary,
+            size: iconSize ?? 20,
+          ),
+          const SizedBox(width: 8),
+          CaptionText(
+            text: isDark ? 'Tema Oscuro' : 'Tema Claro',
+            color: textColor ?? theme.colorScheme.onSurfaceVariant,
+            fontSize: fontSize ?? 12,
+          ),
+        ],
+      ),
     );
   }
 }

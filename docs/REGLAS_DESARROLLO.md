@@ -18,16 +18,24 @@ Este documento define las reglas y convenciones que deben seguir todos los desar
 - bovino_entity.dart
 - camera_bloc.dart
 - tensorflow_server_datasource_impl.dart
+- splash_service.dart
+- screen_home.dart
 - BovinoEntity
 - CameraBloc
+- SplashService
+- ScreenHome
 - API_BASE_URL
 
 ❌ Incorrecto:
 - BovinoEntity.dart
 - cameraBloc.dart
 - tensorflowServerDataSourceImpl.dart
+- SplashService.dart
+- ScreenHome.dart
 - bovino_entity
 - camera_bloc
+- splash_service
+- screen_home
 - apiBaseUrl
 ```
 
@@ -61,6 +69,7 @@ abstract class BovinoRepository {
 // ✅ Variables privadas
 final String _privateVariable = 'value';
 final CameraService _cameraService;
+final SplashService _splashService;
 
 // ✅ Métodos públicos
 Future<void> analizarFrame(String framePath) async {
@@ -286,6 +295,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 // ✅ Singleton para servicios
 _getIt.registerSingleton<CameraService>(CameraService());
 _getIt.registerSingleton<PermissionService>(PermissionService());
+_getIt.registerSingleton<SplashService>(SplashService());
 
 // ✅ Singleton para datasources
 _getIt.registerSingleton<TensorFlowServerDataSource>(
@@ -300,6 +310,9 @@ _getIt.registerFactory<BovinoBloc>(
   () => BovinoBloc(repository: _getIt<BovinoRepository>()),
 );
 _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
+_getIt.registerFactory<SplashBloc>(
+  () => SplashBloc(splashService: _getIt<SplashService>()),
+);
 
 // ✅ Lazy Singleton
 _getIt.registerLazySingleton<Repository>(
@@ -327,29 +340,136 @@ class SomeService {
 }
 ```
 
-## 📱 UI y Widgets
+## 📱 UI y Widgets - Atomic Design
 
-### Estructura de Widgets
+### Estructura de Widgets por Atomic Design
+
+#### **Atoms** (Componentes Básicos)
 ```dart
-class CustomWidget extends StatelessWidget {
-  final String title;
-  final VoidCallback? onPressed;
+// ✅ CustomText
+class CustomText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
   
-  const CustomWidget({
+  const CustomText({
     super.key,
-    required this.title,
-    this.onPressed,
+    required this.text,
+    this.style,
+    this.textAlign,
   });
   
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // Usar constantes de AppColors y AppUIConfig
-      color: AppColors.background,
-      padding: const EdgeInsets.all(AppUIConfig.padding),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium,
+    return Text(
+      text,
+      style: style,
+      textAlign: textAlign,
+    );
+  }
+}
+
+// ✅ CustomButton
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final ButtonStyle? style;
+  
+  const CustomButton({
+    super.key,
+    required this.text,
+    this.onPressed,
+    this.style,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: style,
+      child: Text(text),
+    );
+  }
+}
+```
+
+#### **Molecules** (Componentes Compuestos)
+```dart
+// ✅ HomeHeader
+class HomeHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  
+  const HomeHeader({
+    super.key,
+    required this.title,
+    required this.subtitle,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CustomText(text: title, style: AppTextStyles.titleLarge),
+        CustomText(text: subtitle, style: AppTextStyles.bodyMedium),
+      ],
+    );
+  }
+}
+```
+
+#### **Organisms** (Componentes Complejos)
+```dart
+// ✅ HomeContentOrganism
+class HomeContentOrganism extends StatelessWidget {
+  final List<BovinoEntity> bovinos;
+  final VoidCallback? onRefresh;
+  
+  const HomeContentOrganism({
+    super.key,
+    required this.bovinos,
+    this.onRefresh,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        HomeHeader(
+          title: AppMessages.homeTitle,
+          subtitle: AppMessages.homeSubtitle,
+        ),
+        BreedsList(bovinos: bovinos),
+        StatsCard(bovinos: bovinos),
+      ],
+    );
+  }
+}
+```
+
+#### **Screens** (Pantallas Reutilizables)
+```dart
+// ✅ ScreenHome
+class ScreenHome extends StatelessWidget {
+  final Widget child;
+  final int currentIndex;
+  final Function(int) onTap;
+  
+  const ScreenHome({
+    super.key,
+    required this.child,
+    required this.currentIndex,
+    required this.onTap,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBarOrganism(),
+      body: child,
+      bottomNavigationBar: BottomNavigationOrganism(
+        currentIndex: currentIndex,
+        onTap: onTap,
       ),
     );
   }
@@ -390,6 +510,145 @@ Column(
       Text('Peso normal', style: TextStyle(color: Colors.green)),
   ],
 )
+```
+
+## 🚀 Splash Screen
+
+### Estructura del Splash
+```dart
+// ✅ SplashBloc
+class SplashBloc extends Bloc<SplashEvent, SplashState> {
+  final SplashService _splashService;
+  final Logger _logger = Logger();
+  
+  SplashBloc({required SplashService splashService})
+      : _splashService = splashService,
+        super(SplashInitial()) {
+    on<InitializeSplash>(_onInitializeSplash);
+    on<CheckServerConnection>(_onCheckServerConnection);
+  }
+  
+  Future<void> _onInitializeSplash(
+    InitializeSplash event,
+    Emitter<SplashState> emit,
+  ) async {
+    try {
+      emit(SplashLoading());
+      _logger.i('Iniciando splash screen...');
+      
+      await Future.delayed(const Duration(seconds: 2));
+      emit(SplashCheckingServer());
+      
+      final isConnected = await _splashService.checkServerConnection();
+      
+      if (isConnected) {
+        emit(SplashReady());
+        _logger.i('Servidor conectado, navegando a HomePage');
+      } else {
+        emit(SplashError(NetworkFailure(message: 'Servidor no disponible')));
+        _logger.w('Servidor no disponible');
+      }
+    } catch (e) {
+      _logger.e('Error en splash screen: $e');
+      emit(SplashError(UnknownFailure(message: e.toString())));
+    }
+  }
+}
+```
+
+### SplashPage
+```dart
+// ✅ SplashPage con animaciones
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage>
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _scaleController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _startSplash();
+  }
+
+  void _initializeAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
+  void _startSplash() {
+    _fadeController.forward();
+    _scaleController.forward();
+    
+    context.read<SplashBloc>().add(InitializeSplash());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: BlocListener<SplashBloc, SplashState>(
+        listener: (context, state) {
+          if (state is SplashReady) {
+            AppRouter.goToHome(context);
+          }
+        },
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo y contenido del splash
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+}
 ```
 
 ## 🎨 Sistema de Temas
@@ -607,11 +866,12 @@ abstract class TensorFlowServerDataSource {
 
 ### Convenciones de Commits
 ```
-feat: agregar análisis de frames con peso estimado
+feat: agregar splash screen nativo con animaciones
+feat: implementar Atomic Design completo con screens
 fix: corregir error en conexión WebSocket
 docs: actualizar documentación de API
 refactor: simplificar lógica de cámara
-test: agregar tests para CameraBloc
+test: agregar tests para SplashBloc
 style: formatear código según estándares
 perf: optimizar captura de frames
 chore: actualizar dependencias
@@ -687,6 +947,49 @@ void main() {
 - **Splash screen** nativo
 - **Iconos adaptativos**
 
+## 🏗️ Atomic Design - Reglas Específicas
+
+### Estructura de Directorios
+```
+lib/presentation/widgets/
+├── atoms/          # Componentes básicos
+├── molecules/      # Componentes compuestos
+├── organisms/      # Componentes complejos
+└── screens/        # Pantallas reutilizables
+```
+
+### Convenciones de Nomenclatura
+- **Atoms**: `custom_text.dart`, `custom_button.dart`
+- **Molecules**: `home_header.dart`, `stats_card.dart`
+- **Organisms**: `app_bar_organism.dart`, `home_content_organism.dart`
+- **Screens**: `screen_home.dart`, `screen_camera.dart`
+
+### Reglas de Composición
+- **Atoms** no pueden depender de otros componentes
+- **Molecules** pueden usar Atoms
+- **Organisms** pueden usar Atoms y Molecules
+- **Screens** pueden usar todos los niveles
+
+### Ejemplo de Composición
+```dart
+// ✅ Organism usando Molecules y Atoms
+class HomeContentOrganism extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        HomeHeader(), // Molecule
+        BreedsList(), // Molecule
+        CustomButton( // Atom
+          text: 'Actualizar',
+          onPressed: () {},
+        ),
+      ],
+    );
+  }
+}
+```
+
 ---
 
-*Estas reglas deben ser seguidas por todos los desarrolladores para mantener la consistencia y calidad del código, optimizado para Android.* 
+*Estas reglas deben ser seguidas por todos los desarrolladores para mantener la consistencia y calidad del código, optimizado para Android, siguiendo Atomic Design y Clean Architecture.* 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 // Presentation
+import '../../presentation/pages/splash_page.dart';
 import '../../presentation/pages/home_page.dart';
 import '../../presentation/pages/camera_page.dart';
 import '../../presentation/pages/settings_page.dart';
@@ -11,15 +12,28 @@ import '../../presentation/pages/not_found_page.dart';
 /// Proporciona navegación declarativa y manejo de rutas centralizado
 class AppRouter {
   // Rutas principales
-  static const String home = '/';
+  static const String splash = '/';
+  static const String home = '/home';
   static const String camera = '/camara';
   static const String settings = '/configuracion';
 
   /// Configuración de rutas usando GoRouter
   static GoRouter get router => GoRouter(
-    initialLocation: home,
+    initialLocation: splash,
     debugLogDiagnostics: true,
     routes: [
+      // Ruta de splash
+      GoRoute(
+        path: splash,
+        name: 'splash',
+        builder: (context, state) => const SplashPage(),
+        pageBuilder:
+            (context, state) => _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: const SplashPage(),
+            ),
+      ),
+
       // Ruta principal
       GoRoute(
         path: home,
@@ -69,6 +83,10 @@ class AppRouter {
   );
 
   /// Métodos de navegación estáticos para facilitar el uso
+  static void goToSplash(BuildContext context) {
+    context.go(splash);
+  }
+
   static void goToHome(BuildContext context) {
     context.go(home);
   }

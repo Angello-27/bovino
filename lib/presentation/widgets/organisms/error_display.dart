@@ -42,7 +42,7 @@ class ErrorDisplay extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
         border: Border.all(
-          color: AppColors.error.withOpacity(0.3),
+          color: AppColors.error.withValues(alpha: 77),
           width: AppUIConfig.borderWidth,
         ),
         boxShadow: AppUIConfig.cardShadow,

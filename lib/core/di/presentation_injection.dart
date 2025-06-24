@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import '../../presentation/blocs/camera_bloc.dart';
 import '../../presentation/blocs/bovino_bloc.dart';
 import '../../presentation/blocs/theme_bloc.dart';
+import '../../presentation/blocs/splash_bloc.dart';
 
 // DI Modules
 import 'services_injection.dart';
@@ -19,6 +20,7 @@ class PresentationInjection {
   /// Configura los BLoCs
   static Future<void> setup() async {
     final cameraService = ServicesInjection.cameraService;
+    final splashService = ServicesInjection.splashService;
     final repository = DataInjection.repository;
 
     _getIt.registerFactory<CameraBloc>(
@@ -31,6 +33,10 @@ class PresentationInjection {
 
     _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
 
+    _getIt.registerFactory<SplashBloc>(
+      () => SplashBloc(splashService: splashService),
+    );
+
     _logger.i('🔧 Presentation Layer configured successfully');
   }
 
@@ -42,4 +48,7 @@ class PresentationInjection {
 
   /// Obtiene la instancia de ThemeBloc
   static ThemeBloc get themeBloc => _getIt<ThemeBloc>();
+
+  /// Obtiene la instancia de SplashBloc
+  static SplashBloc get splashBloc => _getIt<SplashBloc>();
 }

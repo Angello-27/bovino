@@ -1,53 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 // Core
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_messages.dart';
+import '../../core/di/dependency_injection.dart';
 
-// Atoms
-import '../widgets/atoms/custom_icon.dart';
-import '../widgets/atoms/custom_text.dart';
+// Screens
+import '../widgets/screens/screen_camera.dart';
 
-// Molecules
-import '../widgets/molecules/theme_toggle_button.dart';
+// BLoCs
+import '../blocs/camera_bloc.dart';
 
 /// Página para captura y análisis de imágenes
 /// Sigue Atomic Design y las reglas de desarrollo establecidas
-class CameraPage extends StatelessWidget {
+class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
 
   @override
+  State<CameraPage> createState() => _CameraPageState();
+}
+
+class _CameraPageState extends State<CameraPage> {
+  late final CameraBloc _cameraBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _cameraBloc = DependencyInjection.cameraBloc;
+    _cameraBloc.add(InitializeCamera());
+  }
+
+  @override
+  void dispose() {
+    _cameraBloc.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const TitleText(text: 'Cámara'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.contentTextLight,
-        elevation: AppUIConfig.appBarElevation,
-        actions: const [ThemeToggleButton()],
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CustomIcon(
-              icon: Icons.camera_alt,
-              size: 80,
-              color: AppColors.primary,
-            ),
-            SizedBox(height: AppUIConfig.padding),
-            TitleText(
-              text: 'Cámara - En desarrollo',
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppUIConfig.margin),
-            BodyText(
-              text: 'Aquí se implementará la captura y análisis de imágenes',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return BlocProvider<CameraBloc>.value(
+      value: _cameraBloc,
+      child: BlocBuilder<CameraBloc, CameraState>(
+        builder: (context, state) {
+          bool isCapturing = state is CameraCapturing;
+          bool isConnected = state is CameraReady || state is CameraCapturing;
+          String? statusMessage;
+
+          if (state is CameraLoading) {
+            statusMessage = AppMessages.cameraInitializing;
+          } else if (state is CameraError) {
+            statusMessage = state.failure.message;
+          } else if (state is CameraCapturing) {
+            statusMessage = AppMessages.capturingFrames;
+          } else if (state is CameraReady) {
+            statusMessage = AppMessages.cameraReady;
+          }
+
+          return ScreenCamera(
+            isCapturing: isCapturing,
+            isConnected: isConnected,
+            statusMessage: statusMessage,
+            onCapturePressed: _onCapturePressed,
+          );
+        },
       ),
     );
+  }
+
+  void _onCapturePressed() {
+    _cameraBloc.add(StartCapture());
   }
 }
