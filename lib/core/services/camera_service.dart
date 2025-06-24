@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:camera/camera.dart';
+
+// Core
 import '../constants/app_constants.dart';
+import '../constants/app_messages.dart';
 import 'permission_service.dart';
 
 /// Servicio de cámara optimizado para Android 10-15
@@ -32,15 +35,18 @@ class CameraService {
       final permissionResult =
           await _permissionService.requestCameraPermission();
       if (!permissionResult.isGranted) {
-        throw CameraException('Permission denied', permissionResult.message);
+        throw CameraException(
+          AppMessages.permissionDeniedError,
+          permissionResult.message,
+        );
       }
 
       // Obtener cámaras disponibles
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw CameraException(
-          'No cameras found',
-          'No se encontraron cámaras disponibles',
+          AppMessages.permissionDeniedError,
+          AppMessages.noCameras,
         );
       }
 
@@ -64,8 +70,8 @@ class CameraService {
     } catch (e) {
       _isInitialized = false;
       throw CameraException(
-        'Initialization error',
-        'Error al inicializar la cámara: $e',
+        AppMessages.cameraInitializationError,
+        '${AppMessages.cameraInitializationError}: $e',
       );
     }
   }

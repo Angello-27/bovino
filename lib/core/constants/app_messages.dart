@@ -7,6 +7,29 @@ class AppMessages {
   static const String cameraReady = 'Cámara lista para capturar frames';
   static const String capturingFrames = 'Capturando frames automáticamente';
   static const String captureError = 'Error al capturar frame';
+  static const String cameraInitializationError =
+      'Error al inicializar la cámara';
+  static const String permissionDeniedError = 'Permiso denegado';
+
+  // Mensajes de permisos
+  static const String cameraPermissionGranted = 'Permiso de cámara concedido';
+  static const String cameraPermissionDenied = 'Permiso de cámara denegado';
+  static const String storagePermissionGranted =
+      'Permiso de almacenamiento concedido';
+  static const String storagePermissionDenied =
+      'Permiso de almacenamiento denegado';
+  static const String mediaPermissionsGranted = 'Permisos de medios concedidos';
+  static const String mediaPermissionsDenied = 'Permisos de medios denegados';
+  static const String mediaPermissionsAlreadyGranted =
+      'Permisos de medios ya concedidos';
+  static const String storagePermissionAlreadyGranted =
+      'Permiso de almacenamiento ya concedido';
+
+  // Mensajes de temas
+  static const String themeLight = 'Claro';
+  static const String themeDark = 'Oscuro';
+  static const String themeLightDescription = 'Tema claro para uso diurno';
+  static const String themeDarkDescription = 'Tema oscuro para uso nocturno';
 
   // Mensajes de análisis
   static const String analyzing = 'Analizando frame del bovino...';

@@ -1,6 +1,9 @@
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
+// Core
+import '../constants/app_messages.dart';
+
 /// Servicio para manejo de permisos siguiendo Clean Architecture
 class PermissionService {
   /// Verifica y solicita permisos de cámara
@@ -9,19 +12,19 @@ class PermissionService {
     if (status.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de cámara concedido',
+        message: AppMessages.cameraPermissionGranted,
       );
     }
     final result = await Permission.camera.request();
     if (result.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de cámara concedido',
+        message: AppMessages.cameraPermissionGranted,
       );
     }
     return PermissionResult(
       isGranted: false,
-      message: 'Permiso de cámara denegado',
+      message: AppMessages.cameraPermissionDenied,
     );
   }
 
@@ -53,7 +56,7 @@ class PermissionService {
     if (photosStatus.isGranted && videosStatus.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permisos de medios ya concedidos',
+        message: AppMessages.mediaPermissionsAlreadyGranted,
       );
     }
 
@@ -64,13 +67,13 @@ class PermissionService {
     if (photosResult.isGranted && videosResult.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permisos de medios concedidos',
+        message: AppMessages.mediaPermissionsGranted,
       );
     }
 
     return PermissionResult(
       isGranted: false,
-      message: 'Permisos de medios denegados',
+      message: AppMessages.mediaPermissionsDenied,
     );
   }
 
@@ -81,7 +84,7 @@ class PermissionService {
     if (status.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de almacenamiento ya concedido',
+        message: AppMessages.storagePermissionAlreadyGranted,
       );
     }
 
@@ -89,12 +92,12 @@ class PermissionService {
     if (result.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de almacenamiento concedido',
+        message: AppMessages.storagePermissionGranted,
       );
     }
     return PermissionResult(
       isGranted: false,
-      message: 'Permiso de almacenamiento denegado',
+      message: AppMessages.storagePermissionDenied,
     );
   }
 
@@ -105,7 +108,7 @@ class PermissionService {
     if (status.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de almacenamiento ya concedido',
+        message: AppMessages.storagePermissionAlreadyGranted,
       );
     }
 
@@ -113,12 +116,12 @@ class PermissionService {
     if (result.isGranted) {
       return PermissionResult(
         isGranted: true,
-        message: 'Permiso de almacenamiento concedido',
+        message: AppMessages.storagePermissionGranted,
       );
     }
     return PermissionResult(
       isGranted: false,
-      message: 'Permiso de almacenamiento denegado',
+      message: AppMessages.storagePermissionDenied,
     );
   }
 

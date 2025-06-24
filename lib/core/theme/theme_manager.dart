@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_messages.dart';
 import 'light_theme.dart';
 import 'dark_theme.dart';
 
@@ -32,22 +33,22 @@ class ThemeManager {
 
   /// Obtiene el nombre del tema
   static String getThemeName(ThemeData theme) {
-    return isDarkTheme(theme) ? 'Oscuro' : 'Claro';
+    return isDarkTheme(theme) ? AppMessages.themeDark : AppMessages.themeLight;
   }
 
   /// Lista de temas disponibles
   static List<Map<String, dynamic>> get availableThemes => [
     {
-      'name': 'Claro',
+      'name': AppMessages.themeLight,
       'theme': lightTheme,
       'icon': Icons.light_mode,
-      'description': 'Tema claro para uso diurno',
+      'description': AppMessages.themeLightDescription,
     },
     {
-      'name': 'Oscuro',
+      'name': AppMessages.themeDark,
       'theme': darkTheme,
       'icon': Icons.dark_mode,
-      'description': 'Tema oscuro para uso nocturno',
+      'description': AppMessages.themeDarkDescription,
     },
   ];
 
