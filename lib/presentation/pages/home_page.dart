@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/bovino_provider.dart';
-import '../widgets/organisms/camera_section.dart';
-import '../widgets/molecules/analysis_result_card.dart';
-import '../widgets/molecules/loading_overlay.dart';
-import '../widgets/atoms/info_card.dart';
+import '../../core/constants/app_colors.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -15,8 +10,8 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Bovino IA'),
         centerTitle: true,
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.contentTextLight,
         elevation: 0,
         actions: [
           IconButton(
@@ -29,150 +24,119 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<BovinoProvider>(
-        builder: (context, provider, child) {
-          return _buildBody(context, provider);
-        },
-      ),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, BovinoProvider provider) {
-    if (provider.isLoading) {
-      return const LoadingOverlay(
-        message: 'Analizando imagen del bovino...',
-      );
-    }
-
-    if (provider.error != null) {
-      return _buildErrorWidget(context, provider);
-    }
-
-    if (provider.bovinoAnalizado != null) {
-      return AnalysisResultCard(
-        bovino: provider.bovinoAnalizado!,
-        onNuevoAnalisis: () => provider.limpiarAnalisis(),
-        onVerHistorial: () => _mostrarHistorial(context),
-      );
-    }
-
-    return _buildCameraWidget(context, provider);
-  }
-
-  Widget _buildCameraWidget(BuildContext context, BovinoProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Header informativo
-          InfoCard(
-            icon: Icons.camera_alt,
-            title: 'Captura una imagen del ganado',
-            subtitle: 'La IA analizará la raza y estimará el peso',
-            gradient: const LinearGradient(
-              colors: [Colors.green, Colors.lightGreen],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Widget de cámara
-          Expanded(
-            child: CameraSection(
-              onImageCaptured: (imagenPath) => provider.analizarImagen(imagenPath),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorWidget(BuildContext context, BovinoProvider provider) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 80,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Error',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              provider.error?.message ?? 'Error desconocido',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => provider.limpiarError(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Intentar de nuevo'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: const HomeView(),
     );
   }
 
   void _mostrarHistorial(BuildContext context) {
-    Navigator.pushNamed(context, '/historial');
+    // TODO: Implementar navegación al historial
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Historial - En desarrollo')));
   }
 
   void _mostrarInformacion(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Acerca de Bovino IA'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Bovino IA es una aplicación que utiliza inteligencia artificial para:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Acerca de Bovino IA'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bovino IA es una aplicación que utiliza inteligencia artificial para:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                Text('• Identificar razas de ganado bovino'),
+                Text('• Estimar el peso del animal'),
+                Text('• Proporcionar características detalladas'),
+                Text('• Mantener un historial de análisis'),
+                SizedBox(height: 16),
+                Text(
+                  'Versión: 1.0.0',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
             ),
-            SizedBox(height: 12),
-            Text('• Identificar razas de ganado bovino'),
-            Text('• Estimar el peso del animal'),
-            Text('• Proporcionar características detalladas'),
-            Text('• Mantener un historial de análisis'),
-            SizedBox(height: 16),
-            Text(
-              'Versión: 1.0.0',
-              style: TextStyle(fontStyle: FontStyle.italic),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+    );
+  }
+}
+
+class HomeView extends StatelessWidget {
+  const HomeView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Header informativo
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(Icons.camera_alt, size: 48, color: AppColors.primary),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Captura una imagen del ganado',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'La IA analizará la raza y estimará el peso',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Widget de cámara (placeholder)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.camera_alt, size: 80, color: AppColors.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Cámara - En desarrollo',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      // TODO: Implementar captura de imagen
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Funcionalidad en desarrollo'),
+                        ),
+                      );
+                    },
+                    child: const Text('Simular Análisis'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
-} 
+}

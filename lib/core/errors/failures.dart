@@ -4,74 +4,44 @@ abstract class Failure extends Equatable {
   final String message;
   final String? code;
 
-  const Failure({
-    required this.message,
-    this.code,
-  });
+  const Failure({required this.message, this.code});
 
   @override
   List<Object?> get props => [message, code];
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const ServerFailure({required super.message, super.code});
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const NetworkFailure({required super.message, super.code});
 }
 
 class CameraFailure extends Failure {
-  const CameraFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const CameraFailure({required super.message, super.code});
 }
 
 class ValidationFailure extends Failure {
-  const ValidationFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const ValidationFailure({required super.message, super.code});
 }
 
 class StorageFailure extends Failure {
-  const StorageFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const StorageFailure({required super.message, super.code});
 }
 
 class PermissionFailure extends Failure {
-  const PermissionFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const PermissionFailure({required super.message, super.code});
 }
 
 class ApiKeyFailure extends Failure {
-  const ApiKeyFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const ApiKeyFailure({required super.message, super.code});
 }
 
 class AnalysisFailure extends Failure {
-  const AnalysisFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
+  const AnalysisFailure({required super.message, super.code});
 }
 
 class UnknownFailure extends Failure {
-  const UnknownFailure({
-    required String message,
-    String? code,
-  }) : super(message: message, code: code);
-} 
+  const UnknownFailure({required super.message, super.code});
+}

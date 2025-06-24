@@ -1,119 +1,168 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get_it/get_it.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:logger/logger.dart';
 import '../constants/app_constants.dart';
 
+// Core Services
+import '../services/camera_service.dart';
+import '../services/permission_service.dart';
+
 // Data
-import '../../data/datasources/remote/openai_datasource.dart';
-import '../../data/datasources/local/local_datasource.dart';
+import '../../data/datasources/remote/tensorflow_server_datasource.dart';
+import '../../data/datasources/remote/tensorflow_server_datasource_impl.dart'
+    as impl;
 import '../../data/repositories/bovino_repository_impl.dart';
 
 // Domain
 import '../../domain/repositories/bovino_repository.dart';
-import '../../domain/usecases/analizar_imagen_usecase.dart';
-import '../../domain/usecases/obtener_historial_usecase.dart';
-import '../../domain/usecases/eliminar_analisis_usecase.dart';
-import '../../domain/usecases/limpiar_historial_usecase.dart';
+
+// Presentation
+import '../../presentation/blocs/camera_bloc.dart';
+import '../../presentation/blocs/bovino_bloc.dart';
 
 /// Clase para manejo de inyección de dependencias siguiendo Clean Architecture
 class DependencyInjection {
-  static late Dio _dio;
-  static late SharedPreferences _prefs;
-  static late OpenAIDataSource _remoteDataSource;
-  static late LocalDataSourceImpl _localDataSource;
-  static late BovinoRepository _repository;
-  static late AnalizarImagenUseCase _analizarImagenUseCase;
-  static late ObtenerHistorialUseCase _obtenerHistorialUseCase;
-  static late EliminarAnalisisUseCase _eliminarAnalisisUseCase;
-  static late LimpiarHistorialUseCase _limpiarHistorialUseCase;
+  static final GetIt _getIt = GetIt.instance;
+  static final Logger _logger = Logger();
 
   /// Inicializa todas las dependencias
   static Future<void> initialize() async {
     await _setupHttpClient();
-    await _setupSharedPreferences();
+    await _setupWebSocket();
+    await _setupServices();
     await _setupDataSources();
     await _setupRepository();
-    await _setupUseCases();
+    await _setupBlocs();
   }
 
   /// Configura el cliente HTTP (Dio)
   static Future<void> _setupHttpClient() async {
-    _dio = Dio();
-    _dio.options.connectTimeout = AppConstants.timeoutSeconds;
-    _dio.options.receiveTimeout = AppConstants.timeoutSeconds;
-    _dio.options.headers['Content-Type'] = 'application/json';
-    
+    final dio = Dio();
+    dio.options.connectTimeout = AppConstants.timeoutSeconds;
+    dio.options.receiveTimeout = AppConstants.timeoutSeconds;
+    dio.options.headers['Content-Type'] = 'application/json';
+
     // Configurar interceptores para logging (solo en debug)
-    _dio.interceptors.add(
+    dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          print('🌐 HTTP Request: ${options.method} ${options.path}');
+          _logger.i('🌐 HTTP Request: \\${options.method} \\${options.path}');
           handler.next(options);
         },
         onResponse: (response, handler) {
-          print('✅ HTTP Response: ${response.statusCode}');
+          _logger.i('✅ HTTP Response: \\${response.statusCode}');
           handler.next(response);
         },
         onError: (error, handler) {
-          print('❌ HTTP Error: ${error.message}');
+          _logger.e('❌ HTTP Error: \\${error.message}');
           handler.next(error);
         },
       ),
     );
+
+    _getIt.registerSingleton<Dio>(dio);
   }
 
-  /// Configura SharedPreferences
-  static Future<void> _setupSharedPreferences() async {
-    _prefs = await SharedPreferences.getInstance();
+  /// Configura WebSocket para notificaciones asíncronas
+  static Future<void> _setupWebSocket() async {
+    try {
+      final channel = WebSocketChannel.connect(
+        Uri.parse(AppConstants.websocketUrl),
+      );
+
+      _getIt.registerSingleton<WebSocketChannel>(channel);
+      _logger.i('🔌 WebSocket Connected to \\${AppConstants.websocketUrl}');
+    } catch (e) {
+      _logger.e('❌ WebSocket Connection Error: \\$e');
+      // Registrar un WebSocket mock para evitar errores
+      _getIt.registerSingleton<WebSocketChannel>(
+        WebSocketChannel.connect(Uri.parse('ws://localhost')),
+      );
+    }
+  }
+
+  /// Configura los servicios core
+  static Future<void> _setupServices() async {
+    _getIt.registerSingleton<CameraService>(CameraService());
+    _getIt.registerSingleton<PermissionService>(PermissionService());
   }
 
   /// Configura las fuentes de datos
   static Future<void> _setupDataSources() async {
-    _remoteDataSource = OpenAIDataSource(_dio);
-    _localDataSource = LocalDataSourceImpl();
+    final dio = _getIt<Dio>();
+    final websocket = _getIt<WebSocketChannel>();
+
+    _getIt.registerSingleton<TensorFlowServerDataSource>(
+      impl.TensorFlowServerDataSourceImpl(dio, websocket),
+    );
   }
 
   /// Configura el repositorio
   static Future<void> _setupRepository() async {
-    _repository = BovinoRepositoryImpl(
-      remoteDataSource: _remoteDataSource,
-      localDataSource: _localDataSource,
+    final remoteDataSource = _getIt<TensorFlowServerDataSource>();
+
+    _getIt.registerSingleton<BovinoRepository>(
+      BovinoRepositoryImpl(remoteDataSource: remoteDataSource),
     );
   }
 
-  /// Configura los casos de uso
-  static Future<void> _setupUseCases() async {
-    _analizarImagenUseCase = AnalizarImagenUseCase(_repository);
-    _obtenerHistorialUseCase = ObtenerHistorialUseCase(_repository);
-    _eliminarAnalisisUseCase = EliminarAnalisisUseCase(_repository);
-    _limpiarHistorialUseCase = LimpiarHistorialUseCase(_repository);
+  /// Configura los BLoCs
+  static Future<void> _setupBlocs() async {
+    final cameraService = _getIt<CameraService>();
+    final repository = _getIt<BovinoRepository>();
+
+    _getIt.registerFactory<CameraBloc>(
+      () => CameraBloc(cameraService: cameraService),
+    );
+
+    _getIt.registerFactory<BovinoBloc>(
+      () => BovinoBloc(repository: repository),
+    );
   }
 
   /// Getters para acceder a las dependencias
-  static Dio get dio => _dio;
-  static SharedPreferences get prefs => _prefs;
-  static OpenAIDataSource get remoteDataSource => _remoteDataSource;
-  static LocalDataSourceImpl get localDataSource => _localDataSource;
-  static BovinoRepository get repository => _repository;
-  static AnalizarImagenUseCase get analizarImagenUseCase => _analizarImagenUseCase;
-  static ObtenerHistorialUseCase get obtenerHistorialUseCase => _obtenerHistorialUseCase;
-  static EliminarAnalisisUseCase get eliminarAnalisisUseCase => _eliminarAnalisisUseCase;
-  static LimpiarHistorialUseCase get limpiarHistorialUseCase => _limpiarHistorialUseCase;
+  static Dio get dio => _getIt<Dio>();
+  static WebSocketChannel get websocket => _getIt<WebSocketChannel>();
+  static CameraService get cameraService => _getIt<CameraService>();
+  static PermissionService get permissionService => _getIt<PermissionService>();
+  static TensorFlowServerDataSource get remoteDataSource =>
+      _getIt<TensorFlowServerDataSource>();
+  static BovinoRepository get repository => _getIt<BovinoRepository>();
+  static CameraBloc get cameraBloc => _getIt<CameraBloc>();
+  static BovinoBloc get bovinoBloc => _getIt<BovinoBloc>();
 
   /// Obtiene todas las dependencias como un mapa (para compatibilidad)
   static Map<String, dynamic> get dependencies => {
-    'dio': _dio,
-    'prefs': _prefs,
-    'remoteDataSource': _remoteDataSource,
-    'localDataSource': _localDataSource,
-    'repository': _repository,
-    'analizarImagenUseCase': _analizarImagenUseCase,
-    'obtenerHistorialUseCase': _obtenerHistorialUseCase,
-    'eliminarAnalisisUseCase': _eliminarAnalisisUseCase,
-    'limpiarHistorialUseCase': _limpiarHistorialUseCase,
+    'dio': dio,
+    'websocket': websocket,
+    'cameraService': cameraService,
+    'permissionService': permissionService,
+    'remoteDataSource': remoteDataSource,
+    'repository': repository,
+    'cameraBloc': cameraBloc,
+    'bovinoBloc': bovinoBloc,
   };
 
   /// Limpia las dependencias (útil para testing)
-  static void dispose() {
-    _dio.close();
+  static Future<void> dispose() async {
+    try {
+      final websocket = _getIt<WebSocketChannel>();
+      await websocket.sink.close();
+    } catch (e) {
+      _logger.e('Error closing WebSocket: \\$e');
+    }
+
+    try {
+      final dio = _getIt<Dio>();
+      dio.close();
+    } catch (e) {
+      _logger.e('Error closing Dio: \\$e');
+    }
+
+    _getIt.reset();
   }
-} 
+
+  /// Verifica si las dependencias están inicializadas
+  static bool get isInitialized => _getIt.isRegistered<Dio>();
+}

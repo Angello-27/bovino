@@ -1,48 +1,46 @@
-# Bovino IA - Reconocimiento de Ganado Bovino
+# Bovino IA - Reconocimiento de Ganado Bovino en Tiempo Real
 
-Una aplicación Flutter moderna que utiliza inteligencia artificial para identificar razas de ganado bovino y estimar su peso a partir de imágenes capturadas con la cámara. Desarrollada siguiendo Clean Architecture y principios SOLID.
+Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar frames y enviarlos a un servidor Python con TensorFlow para identificar razas de ganado bovino. Desarrollada siguiendo Clean Architecture, SOLID Principles y BLoC Pattern.
+
+## 🎯 Objetivo Principal
+
+**Bovino IA** es una aplicación móvil que captura frames de la cámara en tiempo real y los envía a un servidor Python con TensorFlow para el reconocimiento automático de razas bovinas, recibiendo notificaciones asíncronas con los resultados.
 
 ## 🚀 Características
 
-- 📸 **Captura en tiempo real** con la cámara del dispositivo
-- 🤖 **Análisis de imágenes** usando OpenAI GPT-4 Vision
+- 📸 **Cámara en vivo** con captura automática de frames
+- 🤖 **Análisis remoto** usando TensorFlow en servidor Python
 - 🐄 **Identificación automática** de razas bovinas
-- ⚖️ **Estimación de peso** basada en características visuales
-- 📊 **Historial de análisis** con persistencia local
+- ⚡ **Notificaciones asíncronas** via WebSocket
 - 🎨 **Interfaz moderna** con Material Design 3
 - 🌙 **Temas claro y oscuro** con cambio dinámico
-- 📱 **Navegación fluida** con transiciones personalizadas
 - 🔒 **Manejo robusto de permisos** para Android 13-15
-- ⚡ **Análisis en background** con cola de procesamiento
-- 🎯 **Arquitectura limpia** siguiendo Clean Architecture
+- 🎯 **Arquitectura limpia** siguiendo Clean Architecture + BLoC
 
 ## 🏗️ Arquitectura
 
-El proyecto sigue **Clean Architecture** con separación clara de responsabilidades:
+El proyecto sigue **Clean Architecture** con **BLoC Pattern** para gestión de estado:
 
 ```
 lib/
 ├── core/                    # 🧠 Capa Core
-│   ├── architecture/        # Documentación de arquitectura
 │   ├── constants/          # Constantes de la aplicación
+│   ├── di/                 # Inyección de dependencias
 │   ├── errors/             # Manejo de errores
 │   ├── services/           # Servicios core (cámara, permisos)
 │   ├── theme/              # Sistema de temas
-│   ├── di/                 # Inyección de dependencias
 │   └── routes/             # Manejo de rutas
 ├── data/                   # 📊 Capa de Datos
-│   ├── datasources/        # Fuentes de datos (local/remoto)
+│   ├── datasources/        # Fuentes de datos (servidor TensorFlow)
 │   ├── models/             # Modelos de datos
 │   └── repositories/       # Implementaciones de repositorios
 ├── domain/                 # 🎯 Capa de Dominio
 │   ├── entities/           # Entidades de negocio
-│   ├── repositories/       # Contratos de repositorios
-│   └── usecases/           # Casos de uso
+│   └── repositories/       # Contratos de repositorios
 └── presentation/           # 🎨 Capa de Presentación
+    ├── blocs/              # Gestión de estado con BLoC
     ├── pages/              # Páginas de la aplicación
-    ├── providers/          # Gestión de estado
     └── widgets/            # Widgets organizados por Atomic Design
-        ├── atoms/          # Componentes básicos
         ├── molecules/      # Componentes compuestos
         └── organisms/      # Componentes complejos
 ```
@@ -51,17 +49,15 @@ lib/
 
 Los widgets están organizados siguiendo **Atomic Design**:
 
-- **Atoms**: Botones, tarjetas, iconos básicos
-- **Molecules**: Tarjetas de resultados, overlays de carga
-- **Organisms**: Secciones de cámara, formularios complejos
+- **Molecules**: Diálogos de permisos, displays de resultados
+- **Organisms**: Widget de cámara en vivo, secciones complejas
 
-## 🎯 Principios SOLID Aplicados
+## 🎯 Principios Aplicados
 
-- **S** - Responsabilidad única por módulo
-- **O** - Extensibilidad sin modificación
-- **L** - Sustitución de Liskov
-- **I** - Segregación de interfaces
-- **D** - Inversión de dependencias
+- **Clean Architecture**: Separación clara de responsabilidades
+- **SOLID Principles**: Principios de diseño orientado a objetos
+- **BLoC Pattern**: Gestión de estado reactiva
+- **Domain-Driven Design**: Entidades de dominio bien definidas
 
 ## ⚙️ Configuración
 
@@ -71,18 +67,19 @@ Los widgets están organizados siguiendo **Atomic Design**:
 flutter pub get
 ```
 
-### 2. Configurar API Key de OpenAI
+### 2. Configurar Servidor TensorFlow
 
-1. Obtén tu API key de OpenAI desde [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Configura la variable de entorno o actualiza el archivo de configuración
-3. La aplicación manejará automáticamente la autenticación
+1. Configura la URL del servidor en `lib/core/constants/app_constants.dart`
+2. Asegúrate de que el servidor Python esté ejecutándose en `192.168.0.8`
+3. El servidor debe tener endpoints para:
+   - Envío de frames: `POST /analyze-frame`
+   - WebSocket para notificaciones: `ws://192.168.0.8/ws`
 
 ### 3. Permisos
 
 La aplicación solicita automáticamente los permisos necesarios:
-- **Cámara**: Para captura de imágenes
-- **Internet**: Para comunicación con APIs
-- **Almacenamiento**: Para guardar historial local
+- **Cámara**: Para captura de frames en tiempo real
+- **Internet**: Para comunicación con el servidor
 
 ### 4. Ejecutar la Aplicación
 
@@ -92,33 +89,18 @@ flutter run
 
 ## 📱 Uso
 
-### Navegación Principal
-- **Inicio**: Captura y análisis de imágenes
-- **Historial**: Ver análisis anteriores
-- **Configuración**: Personalizar la aplicación
-- **Acerca de**: Información del proyecto
+### Flujo de Funcionamiento
+1. **Iniciar cámara**: La aplicación abre la cámara en tiempo real
+2. **Captura automática**: Se capturan frames cada X segundos
+3. **Envío al servidor**: Los frames se envían al servidor TensorFlow
+4. **Análisis remoto**: El servidor procesa la imagen con TensorFlow
+5. **Notificación**: El servidor envía el resultado via WebSocket
+6. **Visualización**: Se muestra la raza identificada y características
 
-### Proceso de Análisis
-1. **Capturar imagen**: Usa la cámara en tiempo real
-2. **Procesamiento**: Análisis automático en background
-3. **Resultados**: Visualización detallada con:
-   - Raza identificada
-   - Peso estimado
-   - Nivel de confianza
-   - Descripción detallada
-   - Características observadas
-
-## 🎨 Sistema de Temas
-
-### Temas Disponibles
-- **Claro**: Optimizado para uso diurno
-- **Oscuro**: Reducción de fatiga visual nocturna
-
-### Características
-- Cambio dinámico de temas
-- Colores de estado (éxito, error, advertencia)
-- Colores de acento personalizables
-- Validación automática de contraste
+### Interfaz
+- **Pantalla principal**: Cámara en vivo con overlay de resultados
+- **Indicadores**: Estado de conexión, análisis en progreso
+- **Resultados**: Raza identificada y características del bovino
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -126,12 +108,12 @@ flutter run
 - **Flutter**: Framework de desarrollo móvil
 - **Material Design 3**: Sistema de diseño moderno
 - **GoRouter**: Navegación declarativa
-- **Provider**: Gestión de estado
+- **BLoC**: Gestión de estado reactiva
 
 ### Backend & APIs
-- **OpenAI GPT-4 Vision**: Análisis de imágenes
-- **Dio**: Cliente HTTP avanzado
-- **SharedPreferences**: Persistencia local
+- **Servidor Python**: Con TensorFlow para análisis
+- **Dio**: Cliente HTTP para envío de frames
+- **WebSocket**: Notificaciones asíncronas
 
 ### Cámara y Permisos
 - **Camera Plugin**: Acceso a cámara en tiempo real
@@ -142,28 +124,23 @@ flutter run
 - **Clean Architecture**: Separación de responsabilidades
 - **Dependency Injection**: Inyección de dependencias
 - **Repository Pattern**: Patrón de repositorio
-- **Use Case Pattern**: Casos de uso
+- **BLoC Pattern**: Gestión de estado
 
 ## 📊 Estructura de Datos
 
 ### Entidades
 ```dart
 class BovinoEntity {
-  final String id;
   final String raza;
-  final double pesoEstimado;
-  final double confianza;
-  final String descripcion;
   final List<String> caracteristicas;
-  final DateTime fechaAnalisis;
+  final double confianza;
+  final DateTime timestamp;
 }
 ```
 
-### Casos de Uso
-- `AnalizarImagenUseCase`: Procesar imágenes
-- `ObtenerHistorialUseCase`: Cargar historial
-- `EliminarAnalisisUseCase`: Eliminar análisis
-- `LimpiarHistorialUseCase`: Limpiar historial
+### BLoCs
+- `CameraBloc`: Gestión de cámara en vivo
+- `BovinoBloc`: Gestión de análisis y resultados
 
 ## 🔧 Configuración Avanzada
 
@@ -173,53 +150,42 @@ class BovinoEntity {
 await DependencyInjection.initialize();
 
 // Acceso a dependencias
-final useCase = DependencyInjection.analizarImagenUseCase;
+final cameraService = DependencyInjection.cameraService;
 ```
 
 ### Navegación
 ```dart
 // Navegación simple
 AppRouter.goToHome(context);
-
-// Navegación con parámetros
-AppRouter.goToAnalysis(context, 'analysis-id');
 ```
 
 ### Temas
 ```dart
 // Cambio dinámico
 final theme = AppTheme.getThemeByString('Oscuro');
-
-// Validación de contraste
-bool accessible = AppTheme.hasGoodContrast(textColor, backgroundColor);
 ```
 
-## 🚀 Características Avanzadas
+## 🚀 Características Técnicas
 
-### Análisis en Tiempo Real
+### Cámara en Tiempo Real
 - Captura automática de frames
-- Rate limiting para evitar sobrecarga
-- Cola de procesamiento en background
+- Rate limiting configurable
+- Optimización de memoria
+
+### Comunicación con Servidor
+- Envío de frames via HTTP
+- Notificaciones via WebSocket
+- Manejo de reconexión automática
 
 ### Manejo de Errores
 - Errores tipados con `Failure` classes
 - Mensajes de error contextuales
 - Recuperación automática
 
-### Persistencia
-- Almacenamiento local con SharedPreferences
-- Historial de análisis persistente
-- Configuraciones de usuario
-
 ## 📱 Compatibilidad
 
 ### Plataformas
 - ✅ Android (API 21+)
-- ✅ iOS (12.0+)
-- ✅ Web
-- ✅ Windows
-- ✅ macOS
-- ✅ Linux
 
 ### Versiones Android
 - **Android 13-15**: Permisos granulares
@@ -237,19 +203,9 @@ test/
 ```
 
 ### Cobertura
-- Tests unitarios para casos de uso
+- Tests unitarios para BLoCs
 - Tests de widgets para componentes UI
 - Tests de integración para flujos completos
-
-## 📚 Documentación
-
-### Archivos de Documentación
-- `docs/REFACTORING_MAIN.md`: Refactorización del main.dart
-- `docs/TEMAS_REFACTORIZACION.md`: Sistema de temas
-- `docs/ALTERNATIVAS_OPENSOURCE.md`: Alternativas open source
-- `docs/EJEMPLO_USO.md`: Ejemplos de uso
-- `docs/GUIA_USUARIO.md`: Guía de usuario
-- `docs/MIGRACION_ARQUITECTURA.md`: Migración de arquitectura
 
 ## 🔄 Flujo de Desarrollo
 
@@ -270,7 +226,7 @@ test/
 
 ### Errores Comunes
 
-#### Error de API Key
+#### Error de Conexión al Servidor
 ```bash
 # Verificar configuración
 flutter doctor
@@ -283,17 +239,22 @@ flutter pub get
 - Reiniciar aplicación
 - Verificar versión de Android/iOS
 
-#### Error de Red
-- Verificar conexión a internet
+#### Error de WebSocket
+- Verificar que el servidor esté ejecutándose
 - Verificar configuración de firewall
-- Verificar API key de OpenAI
+- Verificar URL del servidor
 
 ### Logs y Debugging
 ```dart
 // Logs automáticos de HTTP
-🌐 HTTP Request: POST /v1/chat/completions
+🌐 HTTP Request: POST /analyze-frame
 ✅ HTTP Response: 200
-❌ HTTP Error: 401 Unauthorized
+❌ HTTP Error: 500 Internal Server Error
+
+// Logs de WebSocket
+🔌 WebSocket Connected
+📨 Message Received: {"raza": "Holstein", "confianza": 0.95}
+🔌 WebSocket Disconnected
 ```
 
 ## 🤝 Contribuir
@@ -301,7 +262,7 @@ flutter pub get
 ### Guías de Contribución
 1. **Fork** el proyecto
 2. **Crea** una rama para tu feature
-3. **Implementa** siguiendo Clean Architecture
+3. **Implementa** siguiendo Clean Architecture + BLoC
 4. **Ejecuta** tests
 5. **Documenta** cambios
 6. **Crea** Pull Request
@@ -310,7 +271,7 @@ flutter pub get
 - Seguir Clean Architecture
 - Implementar tests
 - Documentar cambios
-- Usar Atomic Design
+- Usar BLoC para estado
 - Mantener consistencia de código
 
 ## 📄 Licencia
@@ -335,22 +296,20 @@ Este proyecto está bajo la **Licencia MIT**. Ver el archivo `LICENSE` para más
 
 ### Próximas Funcionalidades
 - [ ] **Análisis de múltiples animales** en una imagen
-- [ ] **Exportación de datos** a CSV/PDF
-- [ ] **Sincronización en la nube** de historial
-- [ ] **Análisis offline** con modelos locales
-- [ ] **Integración con sistemas** de gestión ganadera
+- [ ] **Configuración de intervalo** de captura
+- [ ] **Modo offline** con cache local
+- [ ] **Exportación de resultados** a CSV
 - [ ] **Análisis de salud** del ganado
-- [ ] **Predicción de peso** por edad
 - [ ] **Reconocimiento facial** de animales
 
 ### Mejoras Técnicas
-- [ ] **Migración a Riverpod** para gestión de estado
-- [ ] **Implementación de BLoC** para casos complejos
 - [ ] **Tests de integración** completos
 - [ ] **CI/CD pipeline** automatizado
 - [ ] **Análisis de código** automatizado
 - [ ] **Documentación API** automática
+- [ ] **Optimización de memoria** para frames
+- [ ] **Compresión de imágenes** antes del envío
 
 ---
 
-**Desarrollado con ❤️ siguiendo las mejores prácticas de Clean Architecture y Atomic Design** 
+**Desarrollado con ❤️ siguiendo las mejores prácticas de Clean Architecture y BLoC Pattern** 
