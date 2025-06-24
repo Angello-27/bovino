@@ -35,6 +35,11 @@ class AppMessages {
   static const String analyzing = 'Analizando frame del bovino...';
   static const String errorAnalysis = 'Error al analizar el frame';
   static const String waitingForResult = 'Esperando resultado del servidor...';
+  static const String frameAnalysisError = 'Error al analizar el frame';
+  static const String fileNotFoundError = 'El archivo no existe';
+  static const String serverConnectionError =
+      'Error de conexión con el servidor';
+  static const String requiredFieldError = 'Campo requerido no encontrado';
 
   // Mensajes de red
   static const String networkError = 'Error de conexión. Verifica tu internet';

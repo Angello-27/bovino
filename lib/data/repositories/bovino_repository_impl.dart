@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
+import '../../core/constants/app_messages.dart';
 import '../../domain/entities/bovino_entity.dart';
 import '../../domain/repositories/bovino_repository.dart';
 import '../datasources/remote/tensorflow_server_datasource.dart';
@@ -15,7 +16,9 @@ class BovinoRepositoryImpl implements BovinoRepository {
       final model = await remoteDataSource.analizarFrame(framePath);
       return Right(model.toEntity());
     } catch (e) {
-      return Left(ServerFailure(message: 'Error al analizar el frame: $e'));
+      return Left(
+        ServerFailure(message: '${AppMessages.frameAnalysisError}: $e'),
+      );
     }
   }
 }
