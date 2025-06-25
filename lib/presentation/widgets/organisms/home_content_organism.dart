@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // Core
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_messages.dart';
+import '../../../core/constants/app_ui_config.dart';
 
 // Molecules
 import '../molecules/home_header.dart';

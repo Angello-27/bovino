@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_messages.dart';
 import '../../../core/errors/failures.dart';
+import '../../../core/constants/app_ui_config.dart';
 
 // Atoms
 import '../atoms/custom_icon.dart';

@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_messages.dart';
 import '../../../core/theme/theme_manager.dart';
+import '../../../core/constants/app_ui_config.dart';
 
 // Presentation
 import '../../blocs/theme_bloc.dart';

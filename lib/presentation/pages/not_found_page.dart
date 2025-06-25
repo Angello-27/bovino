@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 // Core
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_ui_config.dart';
 import '../../core/routes/app_router.dart';
 
 // Atoms

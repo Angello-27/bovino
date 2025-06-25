@@ -1,3 +1,23 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "[dart]": {
+        "css.validate": false,
+        "scss.validate": false,
+        "less.validate": false,
+        "css.lint.unknownAtRules": "ignore",
+        "css.lint.unknownProperties": "ignore",
+        "css.lint.unknownVendorSpecificProperties": "ignore",
+        "css.lint.validProperties": [],
+        "css.lint.invalidProperties": []
+    },
+    "css.validate": false,
+    "scss.validate": false,
+    "less.validate": false,
+    "css.lint.unknownAtRules": "ignore",
+    "css.lint.unknownProperties": "ignore",
+    "css.lint.unknownVendorSpecificProperties": "ignore",
+    "css.lint.validProperties": [],
+    "css.lint.invalidProperties": [],
+    "stylelint.validate": ["css", "scss", "less"],
+    "stylelint.enable": false
 }

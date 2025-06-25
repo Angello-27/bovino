@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 // Core
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_ui_config.dart';
 
 /// Átomo para botones personalizados
 /// Sigue Atomic Design y las reglas de desarrollo establecidas

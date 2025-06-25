@@ -89,59 +89,6 @@ class AppColors {
   static const Color darkScrim = Color(0x88000000); // Colors.black54
 }
 
-class AppUIConfig {
-  // Dimensiones
-  static const double borderRadius = 12.0;
-  static const double padding = 16.0;
-  static const double margin = 8.0;
-  static const double iconSize = 24.0;
-
-  // Paddings específicos
-  static const EdgeInsets buttonPadding = EdgeInsets.symmetric(
-    horizontal: 24,
-    vertical: 12,
-  );
-  static const EdgeInsets textButtonPadding = EdgeInsets.symmetric(
-    horizontal: 16,
-    vertical: 8,
-  );
-  static const EdgeInsets chipPadding = EdgeInsets.symmetric(
-    horizontal: 12,
-    vertical: 8,
-  );
-  static const EdgeInsets listTilePadding = EdgeInsets.symmetric(
-    horizontal: 16,
-    vertical: 8,
-  );
-  static const EdgeInsets inputPadding = EdgeInsets.all(padding);
-
-  // Aspectos
-  static const double cameraAspectRatio = 4 / 3;
-  static const double previewAspectRatio = 16 / 9;
-
-  // Elevaciones
-  static const double cardElevation = 2.0;
-  static const double buttonElevation = 1.0;
-  static const double appBarElevation = 0.0;
-
-  // Bordes
-  static const double borderWidth = 1.0;
-  static const double cameraBorderWidth = 2.0;
-
-  // Animaciones
-  static const Duration animationDuration = Duration(milliseconds: 300);
-  static const Duration shortAnimationDuration = Duration(milliseconds: 150);
-
-  // Sombras
-  static const List<BoxShadow> cardShadow = [
-    BoxShadow(color: Color(0x1A000000), offset: Offset(0, 2), blurRadius: 4),
-  ];
-
-  static const List<BoxShadow> buttonShadow = [
-    BoxShadow(color: Color(0x1A000000), offset: Offset(0, 1), blurRadius: 2),
-  ];
-}
-
 class AppGradients {
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [AppColors.primary, AppColors.primaryLight],

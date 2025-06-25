@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_ui_config.dart';
 import 'theme_factory.dart';
 
 /// Tema claro de la aplicación
@@ -144,32 +145,22 @@ class LightTheme {
       // Popup Menu Theme
       popupMenuTheme: PopupMenuThemeData(
         color: AppColors.lightSurface,
-        elevation: 8,
+        elevation: AppUIConfig.dialogElevation,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
         ),
-        textStyle: TextStyle(color: AppColors.lightTextPrimary),
+        textStyle: const TextStyle(color: AppColors.lightTextPrimary),
       ),
 
       // Drawer Theme
-      drawerTheme: DrawerThemeData(
+      drawerTheme: const DrawerThemeData(
         backgroundColor: AppColors.lightSurface,
         scrimColor: AppColors.lightScrim,
-        elevation: 16,
-      ),
-
-      // Bottom Sheet Theme
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: AppColors.lightSurface,
-        modalBackgroundColor: AppColors.lightSurface,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
+        elevation: AppUIConfig.dialogElevation * 2,
       ),
 
       // Tab Bar Theme
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.lightGrey400,
         indicatorColor: AppColors.primary,
@@ -177,7 +168,7 @@ class LightTheme {
       ),
 
       // Expansion Tile Theme
-      expansionTileTheme: ExpansionTileThemeData(
+      expansionTileTheme: const ExpansionTileThemeData(
         backgroundColor: Colors.transparent,
         collapsedBackgroundColor: Colors.transparent,
         textColor: AppColors.lightTextPrimary,
@@ -188,18 +179,16 @@ class LightTheme {
 
       // Data Table Theme
       dataTableTheme: DataTableThemeData(
-        headingTextStyle: TextStyle(
+        headingTextStyle: const TextStyle(
           color: AppColors.lightTextPrimary,
           fontWeight: FontWeight.bold,
         ),
-        dataTextStyle: TextStyle(color: AppColors.lightTextPrimary),
-        dividerThickness: 1,
-        columnSpacing: 16,
-        horizontalMargin: 16,
+        dataTextStyle: const TextStyle(color: AppColors.lightTextPrimary),
+        dividerThickness: AppUIConfig.dividerThickness,
+        columnSpacing: AppUIConfig.dataTableColumnSpacing,
+        horizontalMargin: AppUIConfig.dataTableHorizontalMargin,
         headingRowColor: WidgetStateProperty.all(AppColors.lightGrey50),
         dataRowColor: WidgetStateProperty.all(Colors.transparent),
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 52,
       ),
     );
   }

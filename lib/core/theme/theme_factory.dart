@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_ui_config.dart';
 
 /// Factory para crear temas compartidos y eliminar redundancia
 class ThemeFactory {
@@ -44,7 +45,7 @@ class ThemeFactory {
       elevation: AppUIConfig.appBarElevation,
       centerTitle: true,
       titleTextStyle: TextStyle(
-        fontSize: 20,
+        fontSize: AppUIConfig.fontSizeXXLarge,
         fontWeight: FontWeight.bold,
         color: foregroundColor,
       ),
@@ -91,7 +92,6 @@ class ThemeFactory {
     return OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: foregroundColor,
-        side: BorderSide(color: borderColor, width: AppUIConfig.borderWidth),
         padding: AppUIConfig.buttonPadding,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
@@ -101,11 +101,11 @@ class ThemeFactory {
   }
 
   /// Crea el tema de tarjetas
-  static CardTheme createCardTheme({
+  static CardThemeData createCardTheme({
     required Color backgroundColor,
     required Color shadowColor,
   }) {
-    return CardTheme(
+    return CardThemeData(
       elevation: AppUIConfig.cardElevation,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
@@ -128,25 +128,12 @@ class ThemeFactory {
     return InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
-        borderSide: BorderSide(color: borderColor),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
-        borderSide: BorderSide(color: borderColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
-        borderSide: BorderSide(
-          color: focusedBorderColor,
-          width: AppUIConfig.borderWidth * 2,
-        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
-        borderSide: BorderSide(
-          color: errorBorderColor,
-          width: AppUIConfig.borderWidth,
-        ),
       ),
       filled: true,
       fillColor: fillColor,
@@ -162,65 +149,65 @@ class ThemeFactory {
   }) {
     return TextTheme(
       displayLarge: TextStyle(
-        fontSize: 32,
+        fontSize: AppUIConfig.fontSizeHeadline,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
       ),
       displayMedium: TextStyle(
-        fontSize: 28,
+        fontSize: AppUIConfig.fontSizeTitle,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
       ),
       displaySmall: TextStyle(
-        fontSize: 24,
+        fontSize: AppUIConfig.fontSizeXXLarge,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
       ),
       headlineLarge: TextStyle(
-        fontSize: 32,
+        fontSize: AppUIConfig.fontSizeHeadline,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
       ),
       headlineMedium: TextStyle(
-        fontSize: 24,
+        fontSize: AppUIConfig.fontSizeXXLarge,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
       ),
       headlineSmall: TextStyle(
-        fontSize: 20,
+        fontSize: AppUIConfig.fontSizeXLarge,
         fontWeight: FontWeight.w600,
         color: primaryTextColor,
       ),
       titleLarge: TextStyle(
-        fontSize: 18,
+        fontSize: AppUIConfig.fontSizeXLarge,
         fontWeight: FontWeight.w600,
         color: primaryTextColor,
       ),
       titleMedium: TextStyle(
-        fontSize: 16,
+        fontSize: AppUIConfig.fontSizeLarge,
         fontWeight: FontWeight.w500,
         color: primaryTextColor,
       ),
       titleSmall: TextStyle(
-        fontSize: 14,
+        fontSize: AppUIConfig.fontSizeMedium,
         fontWeight: FontWeight.w500,
         color: primaryTextColor,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: primaryTextColor),
-      bodyMedium: TextStyle(fontSize: 14, color: primaryTextColor),
-      bodySmall: TextStyle(fontSize: 12, color: secondaryTextColor),
+      bodyLarge: TextStyle(fontSize: AppUIConfig.fontSizeLarge, color: primaryTextColor),
+      bodyMedium: TextStyle(fontSize: AppUIConfig.fontSizeMedium, color: primaryTextColor),
+      bodySmall: TextStyle(fontSize: AppUIConfig.fontSizeSmall, color: secondaryTextColor),
       labelLarge: TextStyle(
-        fontSize: 14,
+        fontSize: AppUIConfig.fontSizeMedium,
         fontWeight: FontWeight.w500,
         color: primaryTextColor,
       ),
       labelMedium: TextStyle(
-        fontSize: 12,
+        fontSize: AppUIConfig.fontSizeSmall,
         fontWeight: FontWeight.w500,
         color: secondaryTextColor,
       ),
       labelSmall: TextStyle(
-        fontSize: 10,
+        fontSize: AppUIConfig.fontSizeSmall - 2,
         fontWeight: FontWeight.w500,
         color: secondaryTextColor,
       ),
@@ -236,7 +223,7 @@ class ThemeFactory {
   static DividerThemeData createDividerTheme({required Color color}) {
     return DividerThemeData(
       color: color,
-      thickness: 1,
+      thickness: AppUIConfig.dividerThickness,
       space: AppUIConfig.margin,
     );
   }
@@ -270,7 +257,7 @@ class ThemeFactory {
     return FloatingActionButtonThemeData(
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
-      elevation: 6,
+      elevation: AppUIConfig.floatingActionButtonElevation,
     );
   }
 
@@ -285,30 +272,30 @@ class ThemeFactory {
       selectedItemColor: selectedItemColor,
       unselectedItemColor: unselectedItemColor,
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: AppUIConfig.cardElevation * 2,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
     );
   }
 
   /// Crea el tema de diálogos
-  static DialogTheme createDialogTheme({
+  static DialogThemeData createDialogTheme({
     required Color backgroundColor,
     required Color titleColor,
     required Color contentColor,
   }) {
-    return DialogTheme(
+    return DialogThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
       ),
       backgroundColor: backgroundColor,
-      elevation: 8,
+      elevation: AppUIConfig.dialogElevation,
       titleTextStyle: TextStyle(
-        fontSize: 18,
+        fontSize: AppUIConfig.fontSizeXLarge,
         fontWeight: FontWeight.bold,
         color: titleColor,
       ),
-      contentTextStyle: TextStyle(fontSize: 14, color: contentColor),
+      contentTextStyle: TextStyle(fontSize: AppUIConfig.fontSizeMedium, color: contentColor),
       surfaceTintColor: AppColors.surfaceTint,
     );
   }
@@ -324,7 +311,7 @@ class ThemeFactory {
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
       ),
       behavior: SnackBarBehavior.floating,
-      elevation: 6,
+      elevation: AppUIConfig.cardElevation * 1.5,
     );
   }
 
@@ -388,12 +375,12 @@ class ThemeFactory {
     return ListTileThemeData(
       contentPadding: AppUIConfig.listTilePadding,
       titleTextStyle: TextStyle(
-        fontSize: 16,
+        fontSize: AppUIConfig.fontSizeLarge,
         fontWeight: FontWeight.w500,
         color: titleColor,
       ),
-      subtitleTextStyle: TextStyle(fontSize: 14, color: subtitleColor),
-      leadingAndTrailingTextStyle: TextStyle(fontSize: 14, color: textColor),
+      subtitleTextStyle: TextStyle(fontSize: AppUIConfig.fontSizeMedium, color: subtitleColor),
+      leadingAndTrailingTextStyle: TextStyle(fontSize: AppUIConfig.fontSizeMedium, color: textColor),
       iconColor: leadingColor,
       textColor: textColor,
       tileColor: Colors.transparent,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_ui_config.dart';
 import '../atoms/bovino_breed_card.dart';
 import '../atoms/custom_text.dart';
 
@@ -29,7 +30,6 @@ class BreedsList extends StatelessWidget {
 
         // Lista horizontal de razas
         SizedBox(
-          height: 160,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(
               horizontal: AppUIConfig.padding,
@@ -59,13 +59,12 @@ class BreedsList extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
               border: Border.all(
                 color: AppColors.info.withValues(alpha: 0.3),
-                width: 1,
               ),
             ),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(Icons.info_outline, color: AppColors.info, size: 20),
-                const SizedBox(width: AppUIConfig.margin),
+                SizedBox(width: AppUIConfig.margin),
                 Expanded(
                   child: CaptionText(
                     text:

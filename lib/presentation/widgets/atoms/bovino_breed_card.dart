@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_ui_config.dart';
 import 'custom_text.dart';
 
 class BovinoBreedCard extends StatelessWidget {
@@ -20,10 +21,10 @@ class BovinoBreedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 120,
-        height: 140,
-        margin: const EdgeInsets.only(right: AppUIConfig.margin),
+      child:  Container(
+        width: AppUIConfig.bovinoCardWidth,
+        height: AppUIConfig.bovinoCardHeight,
+        margin: const EdgeInsetsDirectional.only(end: AppUIConfig.margin),
         decoration: BoxDecoration(
           color:
               isSelected
@@ -32,7 +33,7 @@ class BovinoBreedCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.lightGrey300,
-            width: isSelected ? 2.0 : 1.0,
+            width: isSelected ? AppUIConfig.borderWidthThick : AppUIConfig.borderWidth,
           ),
           boxShadow: AppUIConfig.cardShadow,
         ),
@@ -44,9 +45,9 @@ class BovinoBreedCard extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppUIConfig.borderRadius),
-                    topRight: Radius.circular(AppUIConfig.borderRadius),
+                  borderRadius: BorderRadiusDirectional.only(
+                    topStart: Radius.circular(AppUIConfig.borderRadius),
+                    topEnd: Radius.circular(AppUIConfig.borderRadius),
                   ),
                   image: DecorationImage(
                     image:
@@ -64,18 +65,18 @@ class BovinoBreedCard extends StatelessWidget {
                         ? Container(
                           decoration: BoxDecoration(
                             color: AppColors.lightGrey50,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(
+                            borderRadius: BorderRadiusDirectional.only(
+                              topStart: Radius.circular(
                                 AppUIConfig.borderRadius,
                               ),
-                              topRight: Radius.circular(
+                              topEnd: Radius.circular(
                                 AppUIConfig.borderRadius,
                               ),
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.pets,
-                            size: 32,
+                            size: AppUIConfig.iconSizeLarge,
                             color: AppColors.lightGrey,
                           ),
                         )
@@ -96,9 +97,9 @@ class BovinoBreedCard extends StatelessWidget {
                       isSelected
                           ? AppColors.primary.withValues(alpha: 0.1)
                           : Colors.transparent,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(AppUIConfig.borderRadius),
-                    bottomRight: Radius.circular(AppUIConfig.borderRadius),
+                  borderRadius: BorderRadiusDirectional.only(
+                    bottomStart: Radius.circular(AppUIConfig.borderRadius),
+                    bottomEnd: Radius.circular(AppUIConfig.borderRadius),
                   ),
                 ),
                 child: Center(
