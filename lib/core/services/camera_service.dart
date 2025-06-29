@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:logger/logger.dart';
 // import 'package:path_provider/path_provider.dart';
@@ -109,6 +108,11 @@ class CameraService {
         return;
       }
       
+      // Verificar que el stream esté disponible
+      if (_frameCapturedController.isClosed) {
+        throw Exception('Stream de frames no disponible');
+      }
+      
       _logger.i('🎬 Iniciando captura automática de frames...');
       
       _isCapturing = true;
@@ -140,6 +144,45 @@ class CameraService {
     
     _cameraStateController.add(CameraState.ready);
     _logger.i('✅ Captura de frames detenida');
+  }
+
+  /// Pausar captura de frames (mantiene el stream activo)
+  void pauseFrameCapture() {
+    _logger.i('⏸️ Pausando captura de frames...');
+    
+    _frameCaptureTimer?.cancel();
+    _frameCaptureTimer = null;
+    _isCapturing = false;
+    
+    _cameraStateController.add(CameraState.ready);
+    _logger.i('✅ Captura de frames pausada');
+  }
+
+  /// Reanudar captura de frames
+  void resumeFrameCapture() {
+    _logger.i('▶️ Reanudando captura de frames...');
+    
+    if (_isCapturing) {
+      _logger.w('⚠️ Ya está capturando frames');
+      return;
+    }
+    
+    // Verificar que el stream esté disponible
+    if (_frameCapturedController.isClosed) {
+      _logger.e('❌ Stream de frames no disponible');
+      return;
+    }
+    
+    _isCapturing = true;
+    
+    // Reanudar timer para captura periódica
+    _frameCaptureTimer = Timer.periodic(
+      AppConstants.frameCaptureInterval,
+      (timer) => _captureFrame(),
+    );
+    
+    _cameraStateController.add(CameraState.capturing);
+    _logger.i('✅ Captura de frames reanudada');
   }
 
   /// Capturar un frame individual
@@ -177,8 +220,12 @@ class CameraService {
       
       _logger.d('📸 Frame capturado: $processedImagePath ($_capturedFramesCount)');
       
-      // Emitir frame capturado
-      _frameCapturedController.add(processedImagePath);
+      // Verificar si el stream está cerrado antes de emitir
+      if (!_frameCapturedController.isClosed) {
+        _frameCapturedController.add(processedImagePath);
+      } else {
+        _logger.w('⚠️ Stream de frames cerrado, no se puede emitir frame');
+      }
       
       // Enviar para análisis asíncrono si el servicio está disponible
       // if (_frameAnalysisService != null) {
@@ -190,42 +237,6 @@ class CameraService {
     } catch (e) {
       _logger.e('❌ Error en captura de frame: $e');
       return null;
-    }
-  }
-
-  /// Enviar frame para análisis asíncrono
-  Future<void> _sendFrameForAnalysis(String imagePath) async {
-    try {
-      final imageFile = File(imagePath);
-      
-      if (!await imageFile.exists()) {
-        _logger.w('⚠️ Archivo de imagen no encontrado: $imagePath');
-        return;
-      }
-      
-      // Verificar tamaño del archivo
-      final fileSize = await imageFile.length();
-      final maxSize = AppConstants.maxImageSize * 1024; // Convertir a bytes
-      
-      if (fileSize > maxSize) {
-        _logger.w('⚠️ Imagen demasiado grande: $fileSize bytes');
-        return;
-      }
-      
-      // Enviar frame para análisis
-      // final frameId = await _frameAnalysisService!.submitFrameForAnalysis(
-      //   imageFile,
-      //   metadata: {
-      //     'captureTime': DateTime.now().toIso8601String(),
-      //     'frameNumber': _capturedFramesCount,
-      //     'fileSize': fileSize,
-      //   },
-      // );
-      
-      _logger.i('📤 Frame enviado para análisis');
-      
-    } catch (e) {
-      _logger.e('❌ Error al enviar frame para análisis: $e');
     }
   }
 

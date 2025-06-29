@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:logger/logger.dart';
+import 'dart:async';
 
 import '../../core/services/camera_service.dart';
 import '../../core/errors/failures.dart';
@@ -19,6 +20,10 @@ class InitializeCamera extends CameraEvent {}
 class StartCapture extends CameraEvent {}
 
 class StopCapture extends CameraEvent {}
+
+class PauseCapture extends CameraEvent {}
+
+class ResumeCapture extends CameraEvent {}
 
 class DisposeCamera extends CameraEvent {}
 
@@ -59,6 +64,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   final CameraService cameraService;
   final BovinoBloc bovinoBloc;
   final Logger _logger = Logger();
+  
+  // Stream subscription
+  StreamSubscription<String>? _frameSubscription;
 
   CameraBloc({
     required this.cameraService,
@@ -67,6 +75,8 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     on<InitializeCamera>(_onInitializeCamera);
     on<StartCapture>(_onStartCapture);
     on<StopCapture>(_onStopCapture);
+    on<PauseCapture>(_onPauseCapture);
+    on<ResumeCapture>(_onResumeCapture);
     on<DisposeCamera>(_onDisposeCamera);
   }
 
@@ -79,12 +89,38 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       _logger.i('Inicializando cámara...');
 
       await cameraService.initialize();
+      
+      // Configurar la suscripción al stream de frames
+      _setupFrameStreamSubscription();
+      
       emit(CameraReady());
       _logger.i('Cámara inicializada correctamente');
     } catch (e) {
       _logger.e('Error al inicializar cámara: $e');
       emit(CameraError(UnknownFailure(message: e.toString())));
     }
+  }
+
+  /// Configurar la suscripción al stream de frames
+  void _setupFrameStreamSubscription() {
+    // Cancelar suscripción anterior si existe
+    _frameSubscription?.cancel();
+    
+    // Crear nueva suscripción
+    _frameSubscription = cameraService.frameStream.listen(
+      (framePath) {
+        _logger.d('Frame capturado: $framePath');
+        
+        // Enviar frame al BovinoBloc para análisis
+        _logger.i('📤 Enviando frame para análisis: $framePath');
+        bovinoBloc.add(AnalizarFrameEvent(framePath));
+      },
+      onError: (error) {
+        _logger.e('Error en stream de frames: $error');
+      },
+    );
+    
+    _logger.i('✅ Suscripción al stream de frames configurada');
   }
 
   Future<void> _onStartCapture(
@@ -94,17 +130,13 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     try {
       _logger.i('Iniciando captura de frames...');
 
-      cameraService.startFrameCapture();
+      // Verificar que el stream esté configurado
+      if (_frameSubscription == null) {
+        _setupFrameStreamSubscription();
+      }
 
-      // Escuchar el stream de frames y enviar al análisis
-      cameraService.frameStream.listen((framePath) {
-        _logger.d('Frame capturado: $framePath');
-        emit(CameraCapturing(framePath));
-        
-        // Enviar frame al BovinoBloc para análisis
-        _logger.i('📤 Enviando frame para análisis: $framePath');
-        bovinoBloc.add(AnalizarFrameEvent(framePath));
-      });
+      cameraService.startFrameCapture();
+      emit(CameraCapturing('')); // Estado inicial de captura
 
       _logger.i('Captura de frames iniciada');
     } catch (e) {
@@ -130,12 +162,50 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     }
   }
 
+  Future<void> _onPauseCapture(
+    PauseCapture event,
+    Emitter<CameraState> emit,
+  ) async {
+    try {
+      _logger.i('Pausando captura de frames...');
+
+      cameraService.pauseFrameCapture();
+      emit(CameraReady());
+
+      _logger.i('Captura de frames pausada');
+    } catch (e) {
+      _logger.e('Error al pausar captura: $e');
+      emit(CameraError(UnknownFailure(message: e.toString())));
+    }
+  }
+
+  Future<void> _onResumeCapture(
+    ResumeCapture event,
+    Emitter<CameraState> emit,
+  ) async {
+    try {
+      _logger.i('Reanudando captura de frames...');
+
+      cameraService.resumeFrameCapture();
+      emit(CameraCapturing('')); // Estado inicial de captura
+
+      _logger.i('Captura de frames reanudada');
+    } catch (e) {
+      _logger.e('Error al reanudar captura: $e');
+      emit(CameraError(UnknownFailure(message: e.toString())));
+    }
+  }
+
   Future<void> _onDisposeCamera(
     DisposeCamera event,
     Emitter<CameraState> emit,
   ) async {
     try {
       _logger.i('Liberando recursos de cámara...');
+
+      // Cancelar suscripción al stream
+      await _frameSubscription?.cancel();
+      _frameSubscription = null;
 
       await cameraService.dispose();
       emit(CameraInitial());
@@ -145,5 +215,11 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       _logger.e('Error al liberar recursos: $e');
       emit(CameraError(UnknownFailure(message: e.toString())));
     }
+  }
+
+  @override
+  Future<void> close() {
+    _frameSubscription?.cancel();
+    return super.close();
   }
 }

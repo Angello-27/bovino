@@ -35,13 +35,34 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   bool _permissionsGranted = false;
   bool _isAnalyzing = false;
+  bool _isPaused = false;
 
   @override
   void initState() {
     super.initState();
+    _logger.i('📱 Inicializando CameraPage...');
+    
+    // Configurar listener del ciclo de vida de la app
     WidgetsBinding.instance.addObserver(this);
+    
     _initializeServices();
     _initializeBlocs();
+    
+    // Configurar listener del CameraBloc
+    _cameraBloc.stream.listen((state) {
+      _logger.d('📷 Estado de CameraBloc cambiado: $state');
+      
+      if (state is CameraReady) {
+        setState(() {
+          _isPaused = true; // Cuando está ready, significa que está pausado
+        });
+      } else if (state is CameraCapturing) {
+        setState(() {
+          _isPaused = false; // Cuando está capturando, no está pausado
+        });
+      }
+    });
+    
     _requestPermissions();
     
     // Escuchar cambios en el estado de la cámara
@@ -235,6 +256,18 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       setState(() {
         _isAnalyzing = false;
       });
+    }
+  }
+
+  void _togglePauseCapture() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
+
+    if (_isPaused) {
+      _cameraBloc.add(PauseCapture());
+    } else {
+      _cameraBloc.add(ResumeCapture());
     }
   }
 
@@ -478,7 +511,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
                                   color: AppColors.contentTextLight,
                                 ),
                                 const SizedBox(height: 16),
-                                Text(
+                                const Text(
                                   'Cámara no inicializada',
                                   style: TextStyle(
                                     color: AppColors.contentTextLight,
@@ -599,18 +632,18 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildControlPanel() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.contentTextLight.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.contentTextLight.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Botón principal de análisis
           SizedBox(
@@ -620,12 +653,12 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _isAnalyzing ? AppColors.error : AppColors.success,
                 foregroundColor: AppColors.contentTextLight,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              icon: Icon(_isAnalyzing ? Icons.stop : Icons.play_arrow),
+              icon: Icon(_isAnalyzing ? Icons.stop : Icons.play_arrow, size: 20),
               label: Text(
                 _isAnalyzing ? AppMessages.stopAnalysis : AppMessages.startAnalysis,
                 style: const TextStyle(
@@ -636,31 +669,33 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             ),
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           
-          // Botón de debug para reinicializar cámara
+          // Botón de pausar/reanudar captura
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                _logger.i('🔧 Reinicializando cámara desde debug...');
-                _cameraBloc.add(DisposeCamera());
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  _initializeCamera();
-                });
-              },
+              onPressed: _isAnalyzing ? _togglePauseCapture : null,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.warning,
-                side: BorderSide(color: AppColors.warning),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                foregroundColor: _isPaused ? AppColors.warning : AppColors.info,
+                side: BorderSide(
+                  color: _isPaused ? AppColors.warning : AppColors.info,
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              icon: const Icon(Icons.refresh, size: 20),
-              label: const Text(
-                'Reinicializar Cámara',
-                style: TextStyle(fontSize: 14),
+              icon: Icon(
+                _isPaused ? Icons.play_arrow : Icons.pause,
+                size: 18,
+              ),
+              label: Text(
+                _isPaused ? 'Reanudar Captura' : 'Pausar Captura',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -701,10 +736,10 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildResultsPlaceholder(String message, Color color) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -714,8 +749,8 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -723,17 +758,17 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.analytics,
-              size: 60,
+              size: 40,
               color: AppColors.contentTextLight,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             CustomText(
               text: message,
               style: const TextStyle(
                 color: AppColors.contentTextLight,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -745,51 +780,55 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildResultsContent(dynamic result) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: AppGradients.successGradient,
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [AppColors.success, Color(0xFF66BB6A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.success.withValues(alpha: 0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 color: AppColors.contentTextLight,
-                size: 24,
+                size: 20,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 6),
               CustomText(
                 text: AppMessages.analysisResult,
-                style: TextStyle(
-                  fontSize: 20,
+                style: const TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.contentTextLight,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           _buildResultItem(
             '🐄 ${AppMessages.breed}',
             result['raza'] ?? AppMessages.notDetected,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _buildResultItem(
             '⚖️ ${AppMessages.estimatedWeight}',
             '${result['peso'] ?? AppMessages.notAvailable} ${AppMessages.kg}',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _buildResultItem(
             '📊 ${AppMessages.confidence}',
             '${result['confianza'] ?? '0'}${AppMessages.percent}',
@@ -801,10 +840,10 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildResultItem(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.contentTextLight.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: AppColors.contentTextLight.withValues(alpha: 0.3),
         ),
@@ -812,20 +851,24 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          CustomText(
-            text: label,
-            style: const TextStyle(
-              color: AppColors.contentTextLight,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: CustomText(
+              text: label,
+              style: const TextStyle(
+                color: AppColors.contentTextLight,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          CustomText(
-            text: value,
-            style: const TextStyle(
-              color: AppColors.contentTextLight,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: CustomText(
+              text: value,
+              style: const TextStyle(
+                color: AppColors.contentTextLight,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
