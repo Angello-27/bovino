@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import 'package:logger/logger.dart';
 
 // Core
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/di/dependency_injection.dart';
+// import '../../core/di/dependency_injection.dart';
 import '../../core/routes/app_router.dart';
-import '../../core/errors/failures.dart';
+import '../../core/services/splash_service.dart';
 
 // BLoCs
 import '../blocs/splash_bloc.dart';
@@ -29,6 +31,7 @@ class _SplashPageState extends State<SplashPage>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late SplashBloc _splashBloc;
+  final Logger _logger = Logger();
 
   @override
   void initState() {
@@ -62,7 +65,28 @@ class _SplashPageState extends State<SplashPage>
   }
 
   void _initializeSplashBloc() {
-    _splashBloc = SplashBloc(splashService: DependencyInjection.splashService);
+    try {
+      // Intentar obtener el SplashBloc registrado en GetIt
+      if (GetIt.instance.isRegistered<SplashBloc>()) {
+        _splashBloc = GetIt.instance<SplashBloc>();
+        _logger.i('✅ SplashBloc obtenido desde GetIt');
+      } else {
+        // Fallback: crear un SplashBloc manualmente
+        _logger.w('⚠️ SplashBloc no registrado en GetIt, creando manualmente');
+        if (GetIt.instance.isRegistered<SplashService>()) {
+          final splashService = GetIt.instance<SplashService>();
+          _splashBloc = SplashBloc(splashService: splashService);
+        } else {
+          // Último fallback: crear sin dependencias
+          _logger.e('❌ SplashService no disponible, creando SplashBloc sin dependencias');
+          _splashBloc = SplashBloc(splashService: SplashService());
+        }
+      }
+    } catch (e) {
+      _logger.e('❌ Error al inicializar SplashBloc: $e');
+      // Fallback final
+      _splashBloc = SplashBloc(splashService: SplashService());
+    }
   }
 
   void _startSplash() {
@@ -212,12 +236,12 @@ class _SplashPageState extends State<SplashPage>
     });
   }
 
-  void _handleError(Failure failure) {
+  void _handleError(dynamic failure) {
     // Aquí se puede manejar el error del splash
     // Por ejemplo, mostrar un diálogo o navegar a una página de error
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Error: ${failure.message}'),
+        content: Text('Error: [31m${failure.message ?? failure.toString()}[0m'),
         backgroundColor: AppColors.error,
       ),
     );

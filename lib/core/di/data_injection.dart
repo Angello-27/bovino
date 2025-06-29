@@ -12,7 +12,6 @@ import '../../domain/repositories/bovino_repository.dart';
 
 // DI Modules
 import 'http_injection.dart';
-import 'websocket_injection.dart';
 
 /// Módulo para inyección de dependencias de datos
 /// Sigue Clean Architecture y separación de responsabilidades
@@ -23,10 +22,9 @@ class DataInjection {
   /// Configura las fuentes de datos
   static Future<void> setupDataSources() async {
     final dio = HttpInjection.dio;
-    final websocket = WebSocketInjection.websocket;
 
     _getIt.registerSingleton<TensorFlowServerDataSource>(
-      impl.TensorFlowServerDataSourceImpl(dio, websocket),
+      impl.TensorFlowServerDataSourceImpl(dio),
     );
 
     _logger.i('🔧 Data Sources configured successfully');

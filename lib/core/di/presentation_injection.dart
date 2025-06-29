@@ -7,9 +7,12 @@ import '../../presentation/blocs/bovino_bloc.dart';
 import '../../presentation/blocs/theme_bloc.dart';
 import '../../presentation/blocs/splash_bloc.dart';
 
-// DI Modules
-import 'services_injection.dart';
-import 'data_injection.dart';
+// Services
+import '../services/camera_service.dart';
+import '../services/splash_service.dart';
+
+// Data
+import '../../domain/repositories/bovino_repository.dart';
 
 /// Módulo para inyección de dependencias de presentación
 /// Sigue Clean Architecture y separación de responsabilidades
@@ -19,9 +22,10 @@ class PresentationInjection {
 
   /// Configura los BLoCs
   static Future<void> setup() async {
-    final cameraService = ServicesInjection.cameraService;
-    final splashService = ServicesInjection.splashService;
-    final repository = DataInjection.repository;
+    // Obtener dependencias desde GetIt después de que estén registradas
+    final cameraService = _getIt<CameraService>();
+    final splashService = _getIt<SplashService>();
+    final repository = _getIt<BovinoRepository>();
 
     _getIt.registerFactory<CameraBloc>(
       () => CameraBloc(cameraService: cameraService),

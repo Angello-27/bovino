@@ -12,7 +12,6 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 - 🤖 **Análisis remoto** usando TensorFlow en servidor Python
 - 🐄 **Identificación automática** de razas bovinas
 - ⚖️ **Estimación de peso** del animal según la raza
-- ⚡ **Notificaciones asíncronas** via WebSocket
 - 🎨 **Interfaz moderna** con Material Design 3
 - 🌙 **Temas claro y oscuro** con cambio dinámico
 - 🔒 **Manejo robusto de permisos** para Android 10-15

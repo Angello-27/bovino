@@ -1,174 +1,281 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:logger/logger.dart';
+// import 'package:path_provider/path_provider.dart';
 
-// Core
 import '../constants/app_constants.dart';
-import '../constants/app_messages.dart';
-import 'permission_service.dart';
+// import '../constants/app_messages.dart';
+// import '../error/error_handler.dart';
+import 'frame_analysis_service.dart';
 
-/// Servicio de cámara optimizado para Android 10-15
+/// Servicio optimizado para captura de frames de cámara
+/// 
+/// Maneja la captura automática de frames y envío asíncrono
+/// para análisis de ganado bovino
 class CameraService {
+  final Logger _logger = Logger();
+  
+  // Cámara
   CameraController? _controller;
+  List<CameraDescription>? _cameras;
+  
+  // Captura de frames
   Timer? _frameCaptureTimer;
-  final StreamController<String> _frameStreamController =
-      StreamController<String>.broadcast();
-  late PermissionService _permissionService;
-  bool _isInitialized = false;
   bool _isCapturing = false;
-  int _capturedFrames = 0;
+  int _capturedFramesCount = 0;
+  
+  // Streams
+  final StreamController<String> _frameCapturedController = 
+      StreamController<String>.broadcast();
+  final StreamController<CameraState> _cameraStateController = 
+      StreamController<CameraState>.broadcast();
+  
+  // Servicio de análisis (se inyectará después)
+  FrameAnalysisService? _frameAnalysisService;
 
-  CameraService() {
-    _permissionService = PermissionService();
-  }
-
-  // Getters
-  CameraController? get controller => _controller;
-  bool get isInitialized => _isInitialized;
+  /// Stream de frames capturados
+  Stream<String> get frameStream => _frameCapturedController.stream;
+  
+  /// Stream de estado de la cámara
+  Stream<CameraState> get cameraStateStream => _cameraStateController.stream;
+  
+  /// Verificar si la cámara está inicializada
+  bool get isInitialized => _controller?.value.isInitialized ?? false;
+  
+  /// Verificar si está capturando frames
   bool get isCapturing => _isCapturing;
-  int get capturedFrames => _capturedFrames;
-  Stream<String> get frameStream => _frameStreamController.stream;
+  
+  /// Número de frames capturados
+  int get capturedFramesCount => _capturedFramesCount;
 
-  /// Inicializa la cámara con configuración optimizada para Android
+  /// Inicializar la cámara
   Future<void> initialize() async {
     try {
-      // Verificar permisos antes de inicializar
-      final permissionResult =
-          await _permissionService.requestCameraPermission();
-      if (!permissionResult.isGranted) {
-        throw CameraException(
-          AppMessages.permissionDeniedError,
-          permissionResult.message,
-        );
-      }
-
+      _logger.i('📷 Inicializando cámara...');
+      
       // Obtener cámaras disponibles
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        throw CameraException(
-          AppMessages.permissionDeniedError,
-          AppMessages.noCameras,
-        );
+      _cameras = await availableCameras();
+      
+      if (_cameras == null || _cameras!.isEmpty) {
+        throw Exception('No se encontraron cámaras disponibles');
       }
-
-      // Preferir cámara trasera para mejor calidad
-      final camera = cameras.firstWhere(
+      
+      // Usar la cámara trasera por defecto
+      final camera = _cameras!.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
+        orElse: () => _cameras!.first,
       );
-
-      // Configurar controlador con resolución alta y sin audio
+      
+      // Inicializar controlador
       _controller = CameraController(
         camera,
-        ResolutionPreset.high, // Usar resolución alta para mejor análisis
-        enableAudio: false, // No necesitamos audio para análisis de frames
+        ResolutionPreset.medium,
+        enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
-
+      
+      // Inicializar cámara
       await _controller!.initialize();
-      _isInitialized = true;
-      _capturedFrames = 0;
+      
+      _logger.i('✅ Cámara inicializada correctamente');
+      _cameraStateController.add(CameraState.ready);
+      
     } catch (e) {
-      _isInitialized = false;
-      throw CameraException(
-        AppMessages.cameraInitializationError,
-        '${AppMessages.cameraInitializationError}: $e',
-      );
+      _logger.e('❌ Error al inicializar cámara: $e');
+      _cameraStateController.add(CameraState.error);
+      rethrow;
     }
   }
 
-  /// Inicia la captura automática de frames usando las constantes de la app
-  Future<void> startFrameCapture({
-    Duration? interval,
-    int maxFrames = AppConstants.maxFramesInMemory,
-  }) async {
-    if (!_isInitialized || _controller == null) {
-      await initialize();
-    }
-
-    if (_isCapturing) {
-      return; // Ya está capturando
-    }
-
-    _isCapturing = true;
-    _capturedFrames = 0;
-
-    // Usar intervalo de las constantes o el proporcionado
-    final captureInterval = interval ?? AppConstants.frameCaptureInterval;
-
-    _frameCaptureTimer = Timer.periodic(captureInterval, (timer) async {
-      // Verificar límite de frames
-      if (_capturedFrames >= maxFrames) {
-        await stopFrameCapture();
+  /// Iniciar captura automática de frames
+  Future<void> startFrameCapture() async {
+    try {
+      if (!isInitialized) {
+        throw Exception('Cámara no inicializada');
+      }
+      
+      if (_isCapturing) {
+        _logger.w('⚠️ Ya está capturando frames');
         return;
       }
-
-      await _captureFrame();
-    });
+      
+      _logger.i('🎬 Iniciando captura automática de frames...');
+      
+      _isCapturing = true;
+      _capturedFramesCount = 0;
+      
+      // Iniciar timer para captura periódica
+      _frameCaptureTimer = Timer.periodic(
+        AppConstants.frameCaptureInterval,
+        (timer) => _captureFrame(),
+      );
+      
+      _cameraStateController.add(CameraState.capturing);
+      _logger.i('✅ Captura de frames iniciada');
+      
+    } catch (e) {
+      _logger.e('❌ Error al iniciar captura: $e');
+      _isCapturing = false;
+      rethrow;
+    }
   }
 
-  /// Detiene la captura automática de frames
-  Future<void> stopFrameCapture() async {
+  /// Detener captura de frames
+  void stopFrameCapture() {
+    _logger.i('🛑 Deteniendo captura de frames...');
+    
     _frameCaptureTimer?.cancel();
     _frameCaptureTimer = null;
     _isCapturing = false;
+    
+    _cameraStateController.add(CameraState.ready);
+    _logger.i('✅ Captura de frames detenida');
   }
 
-  /// Captura un frame individual
-  Future<String?> _captureFrame() async {
-    if (!_isInitialized ||
-        _controller == null ||
-        !_controller!.value.isInitialized) {
-      return null;
-    }
-
+  /// Capturar un frame individual
+  Future<String?> captureFrame() async {
     try {
-      final image = await _controller!.takePicture();
-      _capturedFrames++;
-
-      // Emitir el frame capturado
-      _frameStreamController.add(image.path);
-
-      return image.path;
+      if (!isInitialized) {
+        throw Exception('Cámara no inicializada');
+      }
+      
+      return await _captureFrame();
+      
     } catch (e) {
-      // Log del error pero no interrumpir el flujo
+      _logger.e('❌ Error al capturar frame: $e');
       return null;
     }
   }
 
-  /// Captura una imagen manual
-  Future<String?> captureImage() async {
-    if (!_isInitialized || _controller == null) {
-      await initialize();
+  /// Método interno para capturar frame
+  Future<String?> _captureFrame() async {
+    try {
+      if (_controller == null || !_controller!.value.isInitialized) {
+        return null;
+      }
+      
+      // Capturar imagen
+      final image = await _controller!.takePicture();
+      
+      // Comprimir imagen si está habilitado
+      String processedImagePath = image.path;
+      if (AppConstants.enableFrameCompression) {
+        processedImagePath = await _compressImage(image.path);
+      }
+      
+      _capturedFramesCount++;
+      
+      _logger.d('📸 Frame capturado: $processedImagePath ($_capturedFramesCount)');
+      
+      // Emitir frame capturado
+      _frameCapturedController.add(processedImagePath);
+      
+      // Enviar para análisis asíncrono si el servicio está disponible
+      if (_frameAnalysisService != null) {
+        _sendFrameForAnalysis(processedImagePath);
+      }
+      
+      return processedImagePath;
+      
+    } catch (e) {
+      _logger.e('❌ Error en captura de frame: $e');
+      return null;
     }
-    return await _captureFrame();
   }
 
-  /// Obtiene información del estado de la cámara
-  Map<String, dynamic> getCameraInfo() {
-    if (!_isInitialized || _controller == null) {
-      return {
-        'isInitialized': false,
-        'isCapturing': _isCapturing,
-        'capturedFrames': _capturedFrames,
-      };
+  /// Enviar frame para análisis asíncrono
+  Future<void> _sendFrameForAnalysis(String imagePath) async {
+    try {
+      final imageFile = File(imagePath);
+      
+      if (!await imageFile.exists()) {
+        _logger.w('⚠️ Archivo de imagen no encontrado: $imagePath');
+        return;
+      }
+      
+      // Verificar tamaño del archivo
+      final fileSize = await imageFile.length();
+      final maxSize = AppConstants.maxImageSize * 1024; // Convertir a bytes
+      
+      if (fileSize > maxSize) {
+        _logger.w('⚠️ Imagen demasiado grande: $fileSize bytes');
+        return;
+      }
+      
+      // Enviar frame para análisis
+      final frameId = await _frameAnalysisService!.submitFrameForAnalysis(
+        imageFile,
+        metadata: {
+          'captureTime': DateTime.now().toIso8601String(),
+          'frameNumber': _capturedFramesCount,
+          'fileSize': fileSize,
+        },
+      );
+      
+      _logger.i('📤 Frame $frameId enviado para análisis');
+      
+    } catch (e) {
+      _logger.e('❌ Error al enviar frame para análisis: $e');
     }
+  }
 
+  /// Comprimir imagen
+  Future<String> _compressImage(String imagePath) async {
+    try {
+      // En una implementación real, aquí comprimirías la imagen
+      // Por ahora, retornamos la ruta original
+      return imagePath;
+    } catch (e) {
+      _logger.e('❌ Error al comprimir imagen: $e');
+      return imagePath;
+    }
+  }
+
+  /// Configurar el servicio de análisis de frames
+  void setFrameAnalysisService(FrameAnalysisService service) {
+    _frameAnalysisService = service;
+    _logger.i('🔗 FrameAnalysisService configurado');
+  }
+
+  /// Obtener controlador de cámara
+  CameraController? get controller => _controller;
+
+  /// Obtener cámaras disponibles
+  List<CameraDescription>? get cameras => _cameras;
+
+  /// Obtener estadísticas de captura
+  Map<String, dynamic> getStats() {
     return {
-      'isInitialized': _controller!.value.isInitialized,
-      'isCapturing': _isCapturing,
-      'capturedFrames': _capturedFrames,
-      'flashMode': _controller!.value.flashMode.toString(),
-      'exposureMode': _controller!.value.exposureMode.toString(),
-      'focusMode': _controller!.value.focusMode.toString(),
+      'isInitialized': isInitialized,
+      'isCapturing': isCapturing,
+      'capturedFramesCount': capturedFramesCount,
+      'cameraCount': _cameras?.length ?? 0,
+      'currentCamera': _controller?.description.name,
     };
   }
 
-  /// Libera recursos de la cámara
+  /// Liberar recursos
   Future<void> dispose() async {
-    await stopFrameCapture();
+    _logger.i('🧹 Liberando recursos de cámara...');
+    
+    stopFrameCapture();
+    
     await _controller?.dispose();
-    await _frameStreamController.close();
-    _isInitialized = false;
-    _capturedFrames = 0;
+    _controller = null;
+    
+    await _frameCapturedController.close();
+    await _cameraStateController.close();
+    
+    _logger.i('✅ Recursos de cámara liberados');
   }
+}
+
+/// Estados de la cámara
+enum CameraState {
+  initial,
+  loading,
+  ready,
+  capturing,
+  error,
 }

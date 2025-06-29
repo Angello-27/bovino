@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:logger/logger.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
@@ -12,18 +11,15 @@ import 'tensorflow_server_datasource.dart';
 /// Proporciona funcionalidades para:
 /// - Envío de frames al servidor para análisis
 /// - Verificación de estado del servidor
-/// - Recepción de notificaciones asíncronas via WebSocket
 /// - Manejo robusto de errores de conexión
 class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
   final Dio _dio;
-  final WebSocketChannel _websocket;
   final Logger _logger = Logger();
 
   /// Constructor que requiere las dependencias necesarias
   ///
   /// [dio] - Cliente HTTP para comunicación REST
-  /// [websocket] - Canal WebSocket para notificaciones
-  TensorFlowServerDataSourceImpl(this._dio, this._websocket);
+  TensorFlowServerDataSourceImpl(this._dio);
 
   @override
   Future<BovinoModel> analizarFrame(String framePath) async {
@@ -99,41 +95,6 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
     } catch (e) {
       _logger.e('❌ Error al verificar conexión: $e');
       return false;
-    }
-  }
-
-  @override
-  Stream<BovinoModel> get notificacionesStream {
-    return _websocket.stream
-        .map((data) {
-          _logger.i('📨 Notificación recibida: $data');
-          return BovinoModel.fromJson(data);
-        })
-        .handleError((error) {
-          _logger.e('❌ Error en stream de notificaciones: $error');
-          throw NetworkFailure(message: 'Error en WebSocket: $error');
-        });
-  }
-
-  @override
-  Future<void> enviarMensaje(String mensaje) async {
-    try {
-      _logger.i('📤 Enviando mensaje: $mensaje');
-      _websocket.sink.add(mensaje);
-    } catch (e) {
-      _logger.e('❌ Error al enviar mensaje: $e');
-      throw NetworkFailure(message: 'Error al enviar mensaje: $e');
-    }
-  }
-
-  @override
-  Future<void> cerrarConexion() async {
-    try {
-      _logger.i('🔌 Cerrando conexión WebSocket...');
-      await _websocket.sink.close();
-      _logger.i('✅ Conexión WebSocket cerrada');
-    } catch (e) {
-      _logger.e('❌ Error al cerrar WebSocket: $e');
     }
   }
 }

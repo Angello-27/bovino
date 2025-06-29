@@ -306,7 +306,7 @@ class ThemeFactory {
   }) {
     return SnackBarThemeData(
       backgroundColor: backgroundColor,
-      contentTextStyle: TextStyle(color: AppColors.contentTextLight),
+      contentTextStyle: const TextStyle(color: AppColors.contentTextLight),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppUIConfig.borderRadius),
       ),
@@ -348,7 +348,7 @@ class ThemeFactory {
       thumbColor: activeColor,
       overlayColor: activeColor.withValues(alpha: 0.2),
       valueIndicatorColor: activeColor,
-      valueIndicatorTextStyle: TextStyle(color: AppColors.contentTextLight),
+      valueIndicatorTextStyle: const TextStyle(color: AppColors.contentTextLight),
     );
   }
 

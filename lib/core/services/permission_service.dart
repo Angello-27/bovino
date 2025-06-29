@@ -10,19 +10,19 @@ class PermissionService {
   Future<PermissionResult> requestCameraPermission() async {
     final status = await Permission.camera.status;
     if (status.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.cameraPermissionGranted,
       );
     }
     final result = await Permission.camera.request();
     if (result.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.cameraPermissionGranted,
       );
     }
-    return PermissionResult(
+    return const PermissionResult(
       isGranted: false,
       message: AppMessages.cameraPermissionDenied,
     );
@@ -54,7 +54,7 @@ class PermissionService {
     final videosStatus = await Permission.videos.status;
 
     if (photosStatus.isGranted && videosStatus.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.mediaPermissionsAlreadyGranted,
       );
@@ -65,13 +65,13 @@ class PermissionService {
     final videosResult = await Permission.videos.request();
 
     if (photosResult.isGranted && videosResult.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.mediaPermissionsGranted,
       );
     }
 
-    return PermissionResult(
+    return const PermissionResult(
       isGranted: false,
       message: AppMessages.mediaPermissionsDenied,
     );
@@ -82,7 +82,7 @@ class PermissionService {
     final status = await Permission.storage.status;
 
     if (status.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.storagePermissionAlreadyGranted,
       );
@@ -90,12 +90,12 @@ class PermissionService {
 
     final result = await Permission.storage.request();
     if (result.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.storagePermissionGranted,
       );
     }
-    return PermissionResult(
+    return const PermissionResult(
       isGranted: false,
       message: AppMessages.storagePermissionDenied,
     );
@@ -106,7 +106,7 @@ class PermissionService {
     final status = await Permission.storage.status;
 
     if (status.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.storagePermissionAlreadyGranted,
       );
@@ -114,12 +114,12 @@ class PermissionService {
 
     final result = await Permission.storage.request();
     if (result.isGranted) {
-      return PermissionResult(
+      return const PermissionResult(
         isGranted: true,
         message: AppMessages.storagePermissionGranted,
       );
     }
-    return PermissionResult(
+    return const PermissionResult(
       isGranted: false,
       message: AppMessages.storagePermissionDenied,
     );

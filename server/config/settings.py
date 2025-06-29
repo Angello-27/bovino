@@ -8,7 +8,7 @@ class Settings:
     """Configuración del servidor Bovino IA"""
 
     # Configuración del servidor
-    HOST: str = os.getenv("HOST", "192.168.0.8")
+    HOST: str = os.getenv("HOST", "0.0.0.0")  # Escuchar en todas las interfaces
     PORT: int = int(os.getenv("PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
 
@@ -65,3 +65,17 @@ class Settings:
         "Shorthorn": 650.0,
         "Gelbvieh": 700.0,
     }
+
+    # Configuración de logging
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FORMAT: str = os.getenv(
+        "LOG_FORMAT", 
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Configuración de CORS
+    ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+    # Configuración de cola de análisis
+    MAX_QUEUE_SIZE: int = int(os.getenv("MAX_QUEUE_SIZE", "100"))
+    FRAME_TIMEOUT_HOURS: int = int(os.getenv("FRAME_TIMEOUT_HOURS", "1"))

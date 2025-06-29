@@ -22,11 +22,6 @@ class AppColors {
   static const Color cameraBorder = Color(0xFF4CAF50);
   static const Color cameraIndicator = Color(0xFF4CAF50);
 
-  // Colores de WebSocket (compartidos entre temas)
-  static const Color websocketConnected = Color(0xFF4CAF50);
-  static const Color websocketDisconnected = Color(0xFFF44336);
-  static const Color websocketConnecting = Color(0xFFFF9800);
-
   // Colores de confianza (compartidos entre temas)
   static const Color highConfidence = Color(0xFF4CAF50);
   static const Color mediumConfidence = Color(0xFFFF9800);

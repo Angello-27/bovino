@@ -46,13 +46,6 @@ class AppMessages {
   static const String serverError =
       'Error de conexión con el servidor TensorFlow';
 
-  // Mensajes de WebSocket
-  static const String websocketError = 'Error de conexión WebSocket';
-  static const String websocketConnecting = 'Conectando al servidor...';
-  static const String websocketConnected = 'Conectado al servidor';
-  static const String websocketDisconnected = 'Desconectado del servidor';
-  static const String websocketReconnecting = 'Reconectando al servidor...';
-
   // Mensajes de resultados
   static const String noBovinoDetected =
       'No se detectó ganado bovino en el frame';
@@ -100,12 +93,8 @@ class AppMessages {
   static const String configServerUrl = 'URL del servidor TensorFlow';
   static const String configFrameInterval = 'Intervalo de captura de frames';
   static const String configImageQuality = 'Calidad de imagen';
-  static const String configWebSocket = 'Configuración WebSocket';
 
   // Mensajes de debug
   static const String debugFrameSent = 'Frame enviado al servidor';
   static const String debugFrameReceived = 'Frame recibido del servidor';
-  static const String debugWebSocketMessage = 'Mensaje WebSocket recibido';
-  static const String debugConnectionEstablished = 'Conexión establecida';
-  static const String debugConnectionLost = 'Conexión perdida';
 }

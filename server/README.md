@@ -1,206 +1,202 @@
-# 🐄 Servidor Bovino IA - Python + TensorFlow
+# 🐄 Bovino IA Server - Backend con Clean Architecture
 
-Servidor backend para el reconocimiento automático de razas bovinas y estimación de peso usando TensorFlow y FastAPI.
+## 📋 Descripción
 
-## 🎯 Características
+Servidor Python con FastAPI que implementa **Clean Architecture** para el análisis de ganado bovino en tiempo real. Procesa imágenes enviadas desde la aplicación Flutter y retorna análisis de razas con estimación de peso.
 
-- **Reconocimiento de Razas**: Clasificación automática de 10 razas bovinas principales
-- **Estimación de Peso**: Cálculo de peso estimado basado en características visuales
-- **API REST**: Endpoints para análisis de imágenes
-- **WebSocket**: Comunicación en tiempo real con Flutter
-- **Modelo CNN**: Red neuronal convolucional optimizada
-- **Logging Profesional**: Sistema de logs detallado
+## 🚀 Lanzador Interactivo (Recomendado)
+
+**¿Tienes múltiples versiones de Python (3.11 y 3.13)?** Usa el lanzador interactivo:
+
+```bash
+python launch_server.py
+```
+
+El lanzador te guía paso a paso para:
+- ✅ Verificar versión de Python correcta
+- ✅ Configurar entorno virtual
+- ✅ Instalar dependencias
+- ✅ Ejecutar el servidor
+- ✅ Solucionar problemas comunes
+
+**📖 Ver documentación completa del lanzador:** [LAUNCHER_README.md](LAUNCHER_README.md)
 
 ## 🏗️ Arquitectura
 
+El servidor sigue **Clean Architecture** con las siguientes capas:
+
 ```
 server/
-├── main.py                 # Servidor FastAPI principal
-├── requirements.txt        # Dependencias Python
-├── config/
-│   └── settings.py        # Configuración del servidor
-├── models/
-│   └── bovino_model.py    # Modelo de datos Pydantic
-├── services/
-│   ├── tensorflow_service.py  # Servicio de IA
-│   └── websocket_manager.py   # Gestor WebSocket
-├── train_model.py         # Script de entrenamiento
-└── README.md              # Documentación
+├── domain/                    # 🎯 Capa de Dominio
+│   ├── entities/             # Entidades de negocio
+│   │   ├── bovino_entity.py         # Entidad Bovino
+│   │   └── analysis_entity.py       # Entidad Analysis
+│   ├── repositories/         # Contratos de repositorios
+│   │   └── bovino_repository.py     # Interfaz del repositorio
+│   └── usecases/            # Casos de uso
+│       ├── analizar_bovino_usecase.py    # Análisis de bovino
+│       ├── consultar_analisis_usecase.py # Consulta de análisis
+│       ├── limpiar_analisis_usecase.py   # Limpieza de datos
+│       └── estadisticas_usecase.py       # Estadísticas
+├── data/                     # 📊 Capa de Datos
+│   ├── datasources/          # Fuentes de datos
+│   │   └── tensorflow_datasource_impl.py # Implementación TensorFlow
+│   ├── models/               # Modelos de datos
+│   │   └── data_models.py            # Modelos con conversión a entidades
+│   └── repositories/         # Implementaciones
+│       └── bovino_repository_impl.py    # Implementación del repositorio
+├── config/                   # ⚙️ Configuración
+│   └── settings.py           # Configuración centralizada
+├── models/                   # 🌐 Modelos de API
+│   └── api_models.py         # Modelos Pydantic para FastAPI
+├── services/                 # 🔧 Servicios de Infraestructura
+│   └── tensorflow_service.py # Servicio TensorFlow
+└── main.py                   # 🚀 Punto de entrada
 ```
 
-## 🚀 Instalación
+## 🔄 Flujo de Datos
 
-### 1. Requisitos Previos
+1. **Cliente Flutter** envía imagen → `main.py`
+2. **main.py** → **UseCase** (lógica de negocio)
+3. **UseCase** → **Repository** (abstracción de datos)
+4. **Repository** → **DataSource** (implementación concreta)
+5. **DataSource** → **TensorFlowService** (infraestructura)
+6. **Respuesta** fluye de vuelta por las capas
 
+## 🚀 Instalación y Configuración
+
+### 1. Activar entorno virtual
 ```bash
-# Python 3.8+
-python --version
+# Windows
+activate_python311.bat
 
-# pip actualizado
-pip install --upgrade pip
+# PowerShell
+.\activate_python311.ps1
 ```
 
-### 2. Clonar y Configurar
-
+### 2. Instalar dependencias
 ```bash
-# Navegar al directorio del servidor
-cd server
-
-# Crear entorno virtual
-python -m venv venv
-
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-### 3. Configuración
-
-Crear archivo `.env` en el directorio `server/`:
-
+### 3. Configurar variables de entorno
+El archivo `.env` se crea automáticamente con valores por defecto:
 ```env
-HOST=192.168.0.8
+HOST=0.0.0.0
 PORT=8000
 DEBUG=True
 MODEL_PATH=models/bovino_model.h5
-LABELS_PATH=models/class_labels.json
 IMAGE_SIZE=224
 BATCH_SIZE=32
 MIN_WEIGHT=200.0
 MAX_WEIGHT=1200.0
 ```
 
-## 🎯 Uso
-
-### 1. Iniciar Servidor
-
+### 4. Ejecutar servidor
 ```bash
-# Activar entorno virtual
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
-# Ejecutar servidor
 python main.py
 ```
 
-El servidor estará disponible en:
-- **HTTP**: http://192.168.0.8:8000
-- **WebSocket**: ws://192.168.0.8:8000/ws
-- **Documentación API**: http://192.168.0.8:8000/docs
+## 📡 Endpoints
 
-### 2. Endpoints Disponibles
+### POST `/submit-frame`
+Envía una imagen para análisis asíncrono.
+- **Input**: Archivo de imagen
+- **Output**: ID del frame para consulta posterior
 
-#### GET `/`
-Información del servidor
-```json
-{
-  "message": "🐄 Bovino IA Server",
-  "version": "1.0.0",
-  "status": "running",
-  "endpoints": {
-    "analyze_frame": "/analyze-frame",
-    "health": "/health",
-    "websocket": "/ws"
-  }
-}
-```
+### GET `/check-status/{frame_id}`
+Consulta el estado de un análisis.
+- **Input**: ID del frame
+- **Output**: Estado y resultado del análisis
 
-#### GET `/health`
-Estado del servidor y modelo
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00",
-  "model_ready": true,
-  "active_connections": 1
-}
-```
+### GET `/health`
+Verifica el estado del servidor.
+- **Output**: Estado, cola de análisis, modelo
 
-#### POST `/analyze-frame`
-Analizar imagen de bovino
-```bash
-curl -X POST "http://192.168.0.8:8000/analyze-frame" \
-     -H "Content-Type: multipart/form-data" \
-     -F "file=@imagen_bovino.jpg"
-```
+### POST `/analyze-frame` (Legacy)
+Análisis síncrono directo.
+- **Input**: Archivo de imagen
+- **Output**: Resultado inmediato
 
-Respuesta:
-```json
-{
-  "raza": "Angus",
-  "caracteristicas": ["Negro", "Sin cuernos", "Musculoso", "Adaptable"],
-  "confianza": 0.87,
-  "timestamp": "2024-01-15T10:30:00",
-  "peso_estimado": 650.5
-}
-```
+### GET `/stats`
+Estadísticas del servidor.
+- **Output**: Métricas de rendimiento
 
-#### WebSocket `/ws`
-Conexión en tiempo real para notificaciones
+## 🎯 Características
 
-## 🤖 Entrenamiento del Modelo
+### ✅ Implementado
+- **Clean Architecture** completa
+- **Inyección de dependencias** con GetIt
+- **Casos de uso** bien definidos
+- **Entidades de dominio** inmutables
+- **Repositorios** con contratos
+- **Modelos de datos** con conversión
+- **Servicios de infraestructura**
+- **API REST** con FastAPI
+- **Análisis asíncrono** con cola
+- **Estimación de peso** por raza
+- **Logging** profesional
+- **Manejo de errores** tipado
 
-### 1. Preparar Datos
+### 🔄 Flujo de Análisis
+1. **Recepción** de imagen desde Flutter
+2. **Preprocesamiento** de imagen
+3. **Detección** de bovino en la imagen
+4. **Clasificación** de raza
+5. **Estimación** de peso
+6. **Respuesta** con resultados
 
-Crear estructura de directorios:
-```
-data/
-└── bovine_images/
-    ├── Angus/
-    │   ├── angus_001.jpg
-    │   ├── angus_002.jpg
-    │   └── ...
-    ├── Hereford/
-    │   ├── hereford_001.jpg
-    │   └── ...
-    ├── Holstein/
-    └── ...
-```
-
-### 2. Entrenar Modelo
+## 🧪 Testing
 
 ```bash
-# Activar entorno virtual
-source venv/bin/activate
+# Tests unitarios
+python -m pytest tests/unit/
 
-# Ejecutar entrenamiento
-python train_model.py
+# Tests de integración
+python -m pytest tests/integration/
+
+# Cobertura
+python -m pytest --cov=.
 ```
 
-### 3. Modelo Entrenado
+## 📊 Modelo de Datos
 
-El script generará:
-- `models/bovino_model.h5` - Modelo TensorFlow
-- `models/class_labels.json` - Etiquetas de clases
-- `models/training_history.png` - Gráficas de entrenamiento
+### Entidades de Dominio
+```python
+# BovinoEntity
+class BovinoEntity:
+    raza: str
+    caracteristicas: List[str]
+    confianza: float
+    peso_estimado: float
+    timestamp: datetime
+    
+    # Getters útiles
+    @property
+    def peso_formateado(self) -> str
+    @property
+    def peso_en_libras(self) -> str
+    @property
+    def es_peso_normal(self) -> bool
+```
 
-## 📊 Razas Soportadas
-
-| Raza | Características | Peso Promedio |
-|------|----------------|---------------|
-| Angus | Negro, Sin cuernos, Musculoso | 650 kg |
-| Hereford | Rojo y blanco, Cuernos cortos | 680 kg |
-| Holstein | Blanco y negro, Grande, Lechera | 750 kg |
-| Jersey | Marrón claro, Pequeña, Lechera | 450 kg |
-| Brahman | Gris, Joroba, Resistente al calor | 700 kg |
-| Charolais | Blanco, Grande, Musculoso | 800 kg |
-| Limousin | Dorado, Musculoso, Cárnico | 750 kg |
-| Simmental | Rojo y blanco, Grande, Doble propósito | 800 kg |
-| Shorthorn | Rojo, Mediano, Doble propósito | 650 kg |
-| Gelbvieh | Dorado, Mediano, Cárnico | 700 kg |
+### Modelos de API
+```python
+# BovinoModel (Pydantic)
+class BovinoModel(BaseModel):
+    raza: str
+    caracteristicas: List[str]
+    confianza: float
+    peso_estimado: float
+    timestamp: datetime
+```
 
 ## 🔧 Configuración Avanzada
 
 ### Variables de Entorno
-
 ```env
 # Servidor
-HOST=192.168.0.8
+HOST=0.0.0.0
 PORT=8000
 DEBUG=True
 
@@ -213,180 +209,59 @@ BATCH_SIZE=32
 # Peso
 MIN_WEIGHT=200.0
 MAX_WEIGHT=1200.0
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+# CORS
+ALLOWED_ORIGINS=*
+
+# Cola
+MAX_QUEUE_SIZE=100
+FRAME_TIMEOUT_HOURS=1
 ```
 
-### Personalización de Razas
+## 🚀 Despliegue
 
-Editar `config/settings.py`:
-
-```python
-BOVINE_BREEDS = [
-    "Tu_Raza_1",
-    "Tu_Raza_2",
-    # ...
-]
-
-BREED_CHARACTERISTICS = {
-    "Tu_Raza_1": ["Característica 1", "Característica 2"],
-    # ...
-}
-
-BREED_AVERAGE_WEIGHTS = {
-    "Tu_Raza_1": 600.0,
-    # ...
-}
-```
-
-## 📱 Integración con Flutter
-
-### Configuración en Flutter
-
-En `lib/core/constants/app_constants.dart`:
-
-```dart
-class AppConstants {
-  static const String API_BASE_URL = 'http://192.168.0.8:8000';
-  static const String WEBSOCKET_URL = 'ws://192.168.0.8:8000/ws';
-  static const String ANALYZE_FRAME_ENDPOINT = '/analyze-frame';
-  static const String HEALTH_ENDPOINT = '/health';
-}
-```
-
-### Uso en Flutter
-
-```dart
-// Enviar imagen para análisis
-final response = await dio.post(
-  '${AppConstants.API_BASE_URL}${AppConstants.ANALYZE_FRAME_ENDPOINT}',
-  data: FormData.fromMap({
-    'file': await MultipartFile.fromFile(imagePath),
-  }),
-);
-
-// Conectar WebSocket
-final channel = WebSocketChannel.connect(
-  Uri.parse(AppConstants.WEBSOCKET_URL),
-);
-```
-
-## 🧪 Testing
-
-### Test Manual
-
+### Desarrollo
 ```bash
-# Verificar salud del servidor
-curl http://192.168.0.8:8000/health
-
-# Probar análisis con imagen
-curl -X POST "http://192.168.0.8:8000/analyze-frame" \
-     -F "file=@test_image.jpg"
+python main.py
 ```
 
-### Test WebSocket
-
-```python
-import websockets
-import asyncio
-
-async def test_websocket():
-    uri = "ws://192.168.0.8:8000/ws"
-    async with websockets.connect(uri) as websocket:
-        # Enviar ping
-        await websocket.send('{"type": "ping"}')
-        
-        # Recibir respuesta
-        response = await websocket.recv()
-        print(f"Respuesta: {response}")
-
-asyncio.run(test_websocket())
+### Producción
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-## 🔍 Monitoreo
+### Docker
+```bash
+docker build -t bovino-server .
+docker run -p 8000:8000 bovino-server
+```
 
-### Logs
+## 📝 Logs
 
-El servidor genera logs detallados:
+El servidor incluye logging detallado:
 - **INFO**: Operaciones normales
 - **WARNING**: Advertencias
-- **ERROR**: Errores críticos
+- **ERROR**: Errores de procesamiento
+- **DEBUG**: Información detallada (solo en desarrollo)
 
-### Métricas
+## 🔗 Integración con Flutter
 
-```bash
-# Estadísticas del servidor
-curl http://192.168.0.8:8000/stats
-```
+El servidor está diseñado para trabajar con la aplicación Flutter:
+- **CORS** configurado para permitir conexiones
+- **Endpoints** optimizados para envío de imágenes
+- **Respuestas** en formato JSON compatible
+- **Análisis asíncrono** para mejor UX
 
-Respuesta:
-```json
-{
-  "active_connections": 2,
-  "total_analyses": 150,
-  "model_accuracy": 0.87,
-  "uptime": "2:30:15"
-}
-```
+## 📄 Documentación API
 
-## 🚨 Solución de Problemas
-
-### Error: Modelo no encontrado
-```bash
-# Verificar que el modelo existe
-ls -la models/bovino_model.h5
-
-# Reentrenar si es necesario
-python train_model.py
-```
-
-### Error: Puerto ocupado
-```bash
-# Cambiar puerto en .env
-PORT=8001
-
-# O matar proceso
-lsof -ti:8000 | xargs kill -9
-```
-
-### Error: Dependencias faltantes
-```bash
-# Reinstalar dependencias
-pip install -r requirements.txt --force-reinstall
-```
-
-## 📈 Optimización
-
-### Rendimiento
-
-1. **GPU**: Usar GPU para inferencia más rápida
-2. **Batch Processing**: Procesar múltiples imágenes
-3. **Caching**: Cachear resultados frecuentes
-4. **Load Balancing**: Múltiples instancias
-
-### Escalabilidad
-
-1. **Docker**: Containerización
-2. **Kubernetes**: Orquestación
-3. **Redis**: Cache distribuido
-4. **Message Queue**: Procesamiento asíncrono
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crear Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
-
-## 📞 Soporte
-
-- **Issues**: Crear issue en GitHub
-- **Documentación**: Ver `docs/` para más detalles
-- **Email**: contacto@bovino-ia.com
+Una vez ejecutado el servidor, la documentación automática está disponible en:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
 ---
 
-**🐄 Bovino IA Server** - Reconocimiento inteligente de ganado bovino 
+*Servidor desarrollado siguiendo Clean Architecture, optimizado para análisis de ganado bovino en tiempo real.* 

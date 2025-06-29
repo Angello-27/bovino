@@ -1,23 +1,23 @@
 from fastapi import (
     FastAPI,
-    WebSocket,
-    WebSocketDisconnect,
     UploadFile,
     File,
     HTTPException,
+    BackgroundTasks
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
+import uuid
+from pydantic import BaseModel
 
-from models.bovino_model import BovinoModel
+from models.api_models import BovinoModel, BovinoAnalysisRequest, BovinoAnalysisResponse
 from services.tensorflow_service import TensorFlowService
-from services.websocket_manager import WebSocketManager
 from config.settings import Settings
 
 # Configuración de logging
@@ -26,7 +26,11 @@ logger = logging.getLogger(__name__)
 
 # Configuración de la aplicación
 settings = Settings()
-app = FastAPI(title="Bovino IA Server", version="1.0.0")
+app = FastAPI(
+    title="🐄 Bovino IA Server",
+    description="Servidor para análisis de ganado bovino con estimación de peso",
+    version="2.0.0"
+)
 
 # Configurar CORS para permitir conexiones desde Flutter
 app.add_middleware(
@@ -39,160 +43,271 @@ app.add_middleware(
 
 # Inicializar servicios
 tensorflow_service = TensorFlowService()
-websocket_manager = WebSocketManager()
 
+# Cola de análisis (en memoria - en producción usar Redis/Celery)
+analysis_queue: Dict[str, dict] = {}
+
+class FrameAnalysisRequest(BaseModel):
+    """Solicitud de análisis de frame"""
+    frame_id: str
+    timestamp: datetime
+
+class FrameAnalysisResponse(BaseModel):
+    """Respuesta de análisis de frame"""
+    frame_id: str
+    status: str  # "pending", "processing", "completed", "failed"
+    result: Optional[BovinoAnalysisResponse] = None
+    error: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+class HealthResponse(BaseModel):
+    """Respuesta de health check"""
+    status: str
+    timestamp: datetime
+    queue_size: int
+    active_analyses: int
 
 @app.on_event("startup")
 async def startup_event():
-    """Inicializar el modelo de TensorFlow al arrancar el servidor"""
+    """Evento de inicio del servidor"""
+    print("🚀 Iniciando servidor Bovino IA...")
+    print(f"📍 Servidor en: http://{settings.HOST}:{settings.PORT}")
+    print(f"📊 Tamaño de imagen: {settings.IMAGE_SIZE}x{settings.IMAGE_SIZE}")
+    print(f"⚖️ Rango de peso: {settings.MIN_WEIGHT}-{settings.MAX_WEIGHT} kg")
     try:
         await tensorflow_service.initialize_model()
         logger.info("✅ Servidor Bovino IA iniciado correctamente")
         logger.info(f"📡 Servidor corriendo en: http://{settings.HOST}:{settings.PORT}")
-        logger.info(
-            f"🔌 WebSocket disponible en: ws://{settings.HOST}:{settings.PORT}/ws"
-        )
     except Exception as e:
         logger.error(f"❌ Error al inicializar el modelo: {e}")
         raise
 
-
-@app.get("/")
+@app.get("/", response_model=dict)
 async def root():
-    """Endpoint de bienvenida"""
+    """Información del servidor"""
     return {
-        "message": "🐄 Bovino IA Server",
-        "version": "1.0.0",
+        "message": "🐄 Bovino IA Server v2.0",
+        "version": "2.0.0",
         "status": "running",
         "endpoints": {
-            "analyze_frame": "/analyze-frame",
+            "submit_frame": "/submit-frame",
+            "check_status": "/check-status/{frame_id}",
             "health": "/health",
-            "websocket": "/ws",
+            "docs": "/docs"
         },
+        "features": [
+            "Análisis asíncrono de frames",
+            "Estimación de peso bovino",
+            "Cola de procesamiento",
+            "Identificación de razas"
+        ]
     }
 
-
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Verificar el estado del servidor y el modelo"""
-    try:
-        model_status = tensorflow_service.is_model_ready()
-        return {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "model_ready": model_status,
-            "active_connections": len(websocket_manager.active_connections),
-        }
-    except Exception as e:
-        logger.error(f"Error en health check: {e}")
-        raise HTTPException(status_code=500, detail="Servidor no saludable")
+    """Verificar estado del servidor y cola"""
+    active_analyses = len([item for item in analysis_queue.values() 
+                          if item["status"] in ["pending", "processing"]])
+    
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.now(),
+        queue_size=len(analysis_queue),
+        active_analyses=active_analyses
+    )
 
+@app.post("/submit-frame", response_model=FrameAnalysisResponse)
+async def submit_frame(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    """
+    Enviar frame para análisis asíncrono
+    
+    - Genera ID único para el frame
+    - Guarda el frame en cola
+    - Inicia procesamiento en background
+    - Retorna ID para consulta posterior
+    """
+    try:
+        # Validar archivo
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
+        
+        # Generar ID único
+        frame_id = str(uuid.uuid4())
+        timestamp = datetime.now()
+        
+        # Leer contenido del archivo
+        image_content = await file.read()
+        
+        # Crear entrada en cola
+        analysis_queue[frame_id] = {
+            "frame_id": frame_id,
+            "status": "pending",
+            "image_content": image_content,
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "result": None,
+            "error": None
+        }
+        
+        # Iniciar procesamiento en background
+        background_tasks.add_task(process_frame_async, frame_id)
+        
+        print(f"📸 Frame {frame_id} enviado para análisis")
+        
+        return FrameAnalysisResponse(
+            frame_id=frame_id,
+            status="pending",
+            created_at=timestamp,
+            updated_at=timestamp
+        )
+        
+    except Exception as e:
+        print(f"❌ Error al enviar frame: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@app.get("/check-status/{frame_id}", response_model=FrameAnalysisResponse)
+async def check_frame_status(frame_id: str):
+    """
+    Consultar estado de análisis de frame
+    
+    - Retorna estado actual del procesamiento
+    - Si está completo, incluye resultado
+    - Si falló, incluye error
+    """
+    try:
+        if frame_id not in analysis_queue:
+            raise HTTPException(status_code=404, detail="Frame no encontrado")
+        
+        frame_data = analysis_queue[frame_id]
+        
+        # Limpiar frames antiguos (más de 1 hora)
+        cleanup_old_frames()
+        
+        return FrameAnalysisResponse(
+            frame_id=frame_id,
+            status=frame_data["status"],
+            result=frame_data["result"],
+            error=frame_data["error"],
+            created_at=frame_data["created_at"],
+            updated_at=frame_data["updated_at"]
+        )
+        
+    except Exception as e:
+        print(f"❌ Error al consultar estado: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+async def process_frame_async(frame_id: str):
+    """
+    Procesar frame de forma asíncrona
+    
+    - Cambia estado a "processing"
+    - Ejecuta análisis con TensorFlow
+    - Actualiza resultado o error
+    - Cambia estado a "completed" o "failed"
+    """
+    try:
+        if frame_id not in analysis_queue:
+            return
+        
+        # Marcar como procesando
+        analysis_queue[frame_id]["status"] = "processing"
+        analysis_queue[frame_id]["updated_at"] = datetime.now()
+        
+        print(f"🔍 Procesando frame {frame_id}...")
+        
+        # Obtener contenido de imagen
+        image_content = analysis_queue[frame_id]["image_content"]
+        
+        # Crear request para análisis
+        request = BovinoAnalysisRequest(
+            image_data=image_content,
+            timestamp=analysis_queue[frame_id]["created_at"]
+        )
+        
+        # Ejecutar análisis
+        result = await tensorflow_service.analyze_bovino(request)
+        
+        # Actualizar resultado
+        analysis_queue[frame_id]["result"] = result
+        analysis_queue[frame_id]["status"] = "completed"
+        analysis_queue[frame_id]["updated_at"] = datetime.now()
+        
+        print(f"✅ Frame {frame_id} procesado exitosamente")
+        
+    except Exception as e:
+        # Marcar como fallido
+        analysis_queue[frame_id]["error"] = str(e)
+        analysis_queue[frame_id]["status"] = "failed"
+        analysis_queue[frame_id]["updated_at"] = datetime.now()
+        
+        print(f"❌ Error procesando frame {frame_id}: {e}")
+
+def cleanup_old_frames():
+    """Limpiar frames antiguos de la cola"""
+    cutoff_time = datetime.now() - timedelta(hours=1)
+    frames_to_remove = []
+    
+    for frame_id, frame_data in analysis_queue.items():
+        if frame_data["created_at"] < cutoff_time:
+            frames_to_remove.append(frame_id)
+    
+    for frame_id in frames_to_remove:
+        del analysis_queue[frame_id]
+        print(f"🗑️ Frame {frame_id} eliminado por antigüedad")
 
 @app.post("/analyze-frame")
-async def analyze_frame(file: UploadFile = File(...)):
+async def analyze_frame_legacy(file: UploadFile = File(...)):
     """
-    Analizar un frame de ganado bovino y retornar información detallada
-
-    Args:
-        file: Imagen del frame a analizar
-
-    Returns:
-        JSON con información del bovino incluyendo raza, características y peso estimado
+    Endpoint legacy para análisis síncrono (mantener compatibilidad)
     """
     try:
-        logger.info(f"📸 Analizando frame: {file.filename}")
-
-        # Validar tipo de archivo
-        if not file.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=400, detail="El archivo debe ser una imagen"
-            )
-
-        # Leer y procesar la imagen
-        image_data = await file.read()
-
-        # Analizar con TensorFlow
-        bovino_result = await tensorflow_service.analyze_bovino(image_data)
-
-        logger.info(
-            f"✅ Análisis completado - Raza: {bovino_result.raza}, Peso: {bovino_result.peso_estimado} kg"
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
+        
+        image_content = await file.read()
+        request = BovinoAnalysisRequest(
+            image_data=image_content,
+            timestamp=datetime.now()
         )
-
-        # Notificar a todos los clientes WebSocket conectados
-        await websocket_manager.broadcast_analysis_result(bovino_result)
-
-        return bovino_result.dict()
-
+        
+        result = await tensorflow_service.analyze_bovino(request)
+        return result
+        
     except Exception as e:
-        logger.error(f"❌ Error al analizar frame: {e}")
-        raise HTTPException(status_code=500, detail=f"Error en el análisis: {str(e)}")
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """Endpoint WebSocket para notificaciones en tiempo real"""
-    await websocket_manager.connect(websocket)
-    try:
-        logger.info("🔌 Nueva conexión WebSocket establecida")
-
-        # Enviar mensaje de bienvenida
-        await websocket.send_text(
-            json.dumps(
-                {
-                    "type": "connection",
-                    "message": "Conexión establecida con Bovino IA Server",
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        )
-
-        # Mantener la conexión activa
-        while True:
-            try:
-                # Esperar mensajes del cliente (opcional)
-                data = await websocket.receive_text()
-                message = json.loads(data)
-
-                logger.info(f"📨 Mensaje recibido: {message}")
-
-                # Procesar mensajes si es necesario
-                if message.get("type") == "ping":
-                    await websocket.send_text(
-                        json.dumps(
-                            {"type": "pong", "timestamp": datetime.now().isoformat()}
-                        )
-                    )
-
-            except WebSocketDisconnect:
-                logger.info("🔌 Cliente WebSocket desconectado")
-                break
-            except Exception as e:
-                logger.error(f"Error en WebSocket: {e}")
-                break
-
-    except Exception as e:
-        logger.error(f"Error en conexión WebSocket: {e}")
-    finally:
-        websocket_manager.disconnect(websocket)
-        logger.info("🔌 Conexión WebSocket cerrada")
-
+        raise HTTPException(status_code=500, detail=f"Error en análisis: {str(e)}")
 
 @app.get("/stats")
 async def get_stats():
     """Obtener estadísticas del servidor"""
+    total_frames = len(analysis_queue)
+    pending_frames = len([item for item in analysis_queue.values() 
+                         if item["status"] == "pending"])
+    processing_frames = len([item for item in analysis_queue.values() 
+                           if item["status"] == "processing"])
+    completed_frames = len([item for item in analysis_queue.values() 
+                          if item["status"] == "completed"])
+    failed_frames = len([item for item in analysis_queue.values() 
+                        if item["status"] == "failed"])
+    
     return {
-        "active_connections": len(websocket_manager.active_connections),
-        "total_analyses": tensorflow_service.get_total_analyses(),
-        "model_accuracy": tensorflow_service.get_model_accuracy(),
-        "uptime": tensorflow_service.get_uptime(),
+        "total_frames": total_frames,
+        "pending": pending_frames,
+        "processing": processing_frames,
+        "completed": completed_frames,
+        "failed": failed_frames,
+        "server_uptime": "running",
+        "model_loaded": tensorflow_service.is_model_loaded()
     }
-
 
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level="info",
+        reload=True,
+        log_level="info"
     )

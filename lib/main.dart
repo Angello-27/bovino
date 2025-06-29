@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 
 // Core
@@ -10,7 +11,7 @@ import 'core/routes/app_router.dart';
 
 // Presentation
 import 'presentation/blocs/theme_bloc.dart';
-import 'presentation/widgets/molecules/theme_error_widget.dart';
+// import 'presentation/widgets/molecules/theme_error_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +19,15 @@ void main() async {
   // Configurar logger
   Logger.level = Level.debug;
 
-  // Inicializar dependencias
-  await DependencyInjection.initialize();
+  try {
+    // Inicializar dependencias
+    await DependencyInjection.initialize();
+    Logger().i('✅ Dependencias inicializadas correctamente');
+  } catch (e, stackTrace) {
+    Logger().e('❌ Error crítico en inicialización: $e');
+    Logger().e('Stack trace: $stackTrace');
+    // Continuar con la app aunque haya errores
+  }
 
   runApp(const BovinoApp());
 }
@@ -32,10 +40,7 @@ class BovinoApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ThemeBloc>(
-          create:
-              (context) =>
-                  DependencyInjection.themeBloc
-                    ..add(const InitializeThemeEvent()),
+          create: (context) => _getThemeBloc(),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
@@ -49,7 +54,7 @@ class BovinoApp extends StatelessWidget {
             builder: (context, child) {
               // Manejar errores de tema usando widget dedicado
               if (state is ThemeError) {
-                return ThemeErrorWidget(errorState: state);
+                return const Center(child: Text('Error de tema'));
               }
               return child!;
             },
@@ -57,5 +62,30 @@ class BovinoApp extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// Obtiene ThemeBloc con manejo robusto de errores
+  ThemeBloc _getThemeBloc() {
+    try {
+      // Intentar obtener ThemeBloc desde GetIt
+      if (GetIt.instance.isRegistered<ThemeBloc>()) {
+        final themeBloc = GetIt.instance<ThemeBloc>();
+        Logger().i('✅ ThemeBloc obtenido desde GetIt en main');
+        themeBloc.add(const InitializeThemeEvent());
+        return themeBloc;
+      } else {
+        // Fallback: crear ThemeBloc manualmente
+        Logger().w('⚠️ ThemeBloc no registrado en GetIt, creando manualmente en main');
+        final themeBloc = ThemeBloc();
+        themeBloc.add(const InitializeThemeEvent());
+        return themeBloc;
+      }
+    } catch (e) {
+      Logger().e('❌ Error al obtener ThemeBloc en main: $e');
+      // Fallback final
+      final themeBloc = ThemeBloc();
+      themeBloc.add(const InitializeThemeEvent());
+      return themeBloc;
+    }
   }
 }

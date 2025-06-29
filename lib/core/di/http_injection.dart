@@ -12,6 +12,9 @@ class HttpInjection {
 
   /// Configura el cliente HTTP (Dio)
   static Future<void> setup() async {
+    _logger.i('🔧 Configurando infraestructura HTTP...');
+
+    // Configurar Dio
     final dio = Dio();
     dio.options.connectTimeout = AppConstants.timeoutSeconds;
     dio.options.receiveTimeout = AppConstants.timeoutSeconds;
@@ -36,7 +39,7 @@ class HttpInjection {
     );
 
     _getIt.registerSingleton<Dio>(dio);
-    _logger.i('🔧 HTTP Client configured successfully');
+    _logger.i('✅ HTTP Client configured successfully');
   }
 
   /// Obtiene la instancia de Dio

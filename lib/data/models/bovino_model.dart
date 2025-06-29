@@ -21,7 +21,7 @@ class BovinoModel {
     // Validar que los campos requeridos existen
     final razaValue = json['raza'];
     if (razaValue == null) {
-      throw ValidationFailure(
+      throw const ValidationFailure(
         message: '${AppMessages.requiredFieldError}: raza',
         code: 'MISSING_RAZA_FIELD',
       );

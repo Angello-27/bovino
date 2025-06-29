@@ -914,7 +914,6 @@ dependencies:
   flutter_bloc: ^8.1.3
   get_it: ^7.6.4
   dio: ^5.3.2
-  web_socket_channel: ^2.4.0
   camera: ^0.10.5+5
   permission_handler: ^11.0.1
   logger: ^2.0.2+1

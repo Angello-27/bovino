@@ -21,21 +21,4 @@ abstract class TensorFlowServerDataSource {
   ///
   /// Retorna `true` si el servidor está disponible y respondiendo.
   Future<bool> verificarConexion();
-
-  /// Stream de notificaciones asíncronas del servidor.
-  ///
-  /// Emite [BovinoModel] cuando el servidor envía resultados.
-  Stream<BovinoModel> get notificacionesStream;
-
-  /// Envía un mensaje al servidor via WebSocket.
-  ///
-  /// [mensaje] - Mensaje a enviar
-  ///
-  /// Lanza [NetworkFailure] si hay problemas de conexión.
-  Future<void> enviarMensaje(String mensaje);
-
-  /// Cierra la conexión WebSocket con el servidor.
-  ///
-  /// Libera recursos y cierra la conexión de forma segura.
-  Future<void> cerrarConexion();
 }

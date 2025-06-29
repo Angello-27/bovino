@@ -22,7 +22,8 @@ class SplashService {
       _logger.i('Splash screen completado exitosamente');
     } catch (e) {
       _logger.e('Error en splash screen: $e');
-      rethrow;
+      // No rethrow para evitar que la app se cierre
+      _logger.w('Continuando con splash screen...');
     }
   }
 
@@ -30,16 +31,21 @@ class SplashService {
   Future<void> _loadResources() async {
     _logger.d('Cargando recursos de la aplicación...');
 
-    // Aquí se pueden cargar recursos como:
-    // - Configuraciones
-    // - Datos iniciales
-    // - Verificar conexión al servidor
-    // - Cargar temas
-    // - Inicializar servicios
+    try {
+      // Aquí se pueden cargar recursos como:
+      // - Configuraciones
+      // - Datos iniciales
+      // - Verificar conexión al servidor
+      // - Cargar temas
+      // - Inicializar servicios
 
-    await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
-    _logger.d('Recursos cargados exitosamente');
+      _logger.d('Recursos cargados exitosamente');
+    } catch (e) {
+      _logger.w('Advertencia al cargar recursos: $e');
+      // Continuar sin fallar
+    }
   }
 
   /// Verifica si el servidor está disponible
@@ -47,10 +53,10 @@ class SplashService {
     try {
       _logger.d('Verificando conexión al servidor...');
 
-      // Aquí se implementaría la verificación real
-      // Por ahora simulamos una verificación exitosa
+      // Simular verificación con timeout
       await Future.delayed(const Duration(milliseconds: 300));
 
+      // Por ahora simulamos una verificación exitosa
       _logger.i('Servidor disponible');
       return true;
     } catch (e) {
