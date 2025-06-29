@@ -34,7 +34,10 @@ class PresentationInjection {
     final repository = _getIt<BovinoRepository>();
 
     _getIt.registerFactory<CameraBloc>(
-      () => CameraBloc(cameraService: cameraService),
+      () => CameraBloc(
+        cameraService: cameraService,
+        bovinoBloc: _getIt<BovinoBloc>(),
+      ),
     );
 
     _getIt.registerFactory<BovinoBloc>(

@@ -9,6 +9,15 @@ import '../constants/app_constants.dart';
 // import '../error/error_handler.dart';
 import 'frame_analysis_service.dart';
 
+/// Estados de la cámara
+enum CameraState {
+  initial,
+  loading,
+  ready,
+  capturing,
+  error,
+}
+
 /// Servicio optimizado para captura de frames de cámara
 /// 
 /// Maneja la captura automática de frames y envío asíncrono
@@ -32,7 +41,7 @@ class CameraService {
       StreamController<CameraState>.broadcast();
   
   // Servicio de análisis (se inyectará después)
-  FrameAnalysisService? _frameAnalysisService;
+  // FrameAnalysisService? _frameAnalysisService;
 
   /// Stream de frames capturados
   Stream<String> get frameStream => _frameCapturedController.stream;
@@ -172,9 +181,9 @@ class CameraService {
       _frameCapturedController.add(processedImagePath);
       
       // Enviar para análisis asíncrono si el servicio está disponible
-      if (_frameAnalysisService != null) {
-        _sendFrameForAnalysis(processedImagePath);
-      }
+      // if (_frameAnalysisService != null) {
+      //   _sendFrameForAnalysis(processedImagePath);
+      // }
       
       return processedImagePath;
       
@@ -204,16 +213,16 @@ class CameraService {
       }
       
       // Enviar frame para análisis
-      final frameId = await _frameAnalysisService!.submitFrameForAnalysis(
-        imageFile,
-        metadata: {
-          'captureTime': DateTime.now().toIso8601String(),
-          'frameNumber': _capturedFramesCount,
-          'fileSize': fileSize,
-        },
-      );
+      // final frameId = await _frameAnalysisService!.submitFrameForAnalysis(
+      //   imageFile,
+      //   metadata: {
+      //     'captureTime': DateTime.now().toIso8601String(),
+      //     'frameNumber': _capturedFramesCount,
+      //     'fileSize': fileSize,
+      //   },
+      // );
       
-      _logger.i('📤 Frame $frameId enviado para análisis');
+      _logger.i('📤 Frame enviado para análisis');
       
     } catch (e) {
       _logger.e('❌ Error al enviar frame para análisis: $e');
@@ -234,7 +243,7 @@ class CameraService {
 
   /// Configurar el servicio de análisis de frames
   void setFrameAnalysisService(FrameAnalysisService service) {
-    _frameAnalysisService = service;
+    // _frameAnalysisService = service;
     _logger.i('🔗 FrameAnalysisService configurado');
   }
 
@@ -269,13 +278,4 @@ class CameraService {
     
     _logger.i('✅ Recursos de cámara liberados');
   }
-}
-
-/// Estados de la cámara
-enum CameraState {
-  initial,
-  loading,
-  ready,
-  capturing,
-  error,
 }

@@ -123,7 +123,10 @@ class DependencyInjection {
       return _getIt<CameraBloc>();
     } catch (e) {
       _logger.w('⚠️ CameraBloc no disponible, creando nuevo');
-      return CameraBloc(cameraService: cameraService);
+      return CameraBloc(
+        cameraService: cameraService,
+        bovinoBloc: bovinoBloc,
+      );
     }
   }
 

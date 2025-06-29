@@ -1,0 +1,27 @@
+# Configuración del servidor
+HOST=0.0.0.0
+PORT=8000
+DEBUG=True
+
+# Configuración del modelo
+MODEL_PATH=models/bovino_model.h5
+LABELS_PATH=models/class_labels.json
+
+# Configuración de imágenes
+IMAGE_SIZE=224
+BATCH_SIZE=32
+
+# Configuración de peso estimado
+MIN_WEIGHT=200.0
+MAX_WEIGHT=1200.0
+
+# Configuración de logging
+LOG_LEVEL=INFO
+LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+# Configuración de CORS
+ALLOWED_ORIGINS=*
+
+# Configuración de cola de análisis
+MAX_QUEUE_SIZE=100
+FRAME_TIMEOUT_HOURS=1 

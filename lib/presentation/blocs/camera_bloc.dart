@@ -4,6 +4,7 @@ import 'package:logger/logger.dart';
 
 import '../../core/services/camera_service.dart';
 import '../../core/errors/failures.dart';
+import 'bovino_bloc.dart';
 
 // Eventos para CameraBloc
 abstract class CameraEvent extends Equatable {
@@ -56,9 +57,13 @@ class CameraError extends CameraState {
 // Bloc para manejar la cámara
 class CameraBloc extends Bloc<CameraEvent, CameraState> {
   final CameraService cameraService;
+  final BovinoBloc bovinoBloc;
   final Logger _logger = Logger();
 
-  CameraBloc({required this.cameraService}) : super(CameraInitial()) {
+  CameraBloc({
+    required this.cameraService,
+    required this.bovinoBloc,
+  }) : super(CameraInitial()) {
     on<InitializeCamera>(_onInitializeCamera);
     on<StartCapture>(_onStartCapture);
     on<StopCapture>(_onStopCapture);
@@ -91,10 +96,14 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 
       cameraService.startFrameCapture();
 
-      // Escuchar el stream de frames
+      // Escuchar el stream de frames y enviar al análisis
       cameraService.frameStream.listen((framePath) {
         _logger.d('Frame capturado: $framePath');
         emit(CameraCapturing(framePath));
+        
+        // Enviar frame al BovinoBloc para análisis
+        _logger.i('📤 Enviando frame para análisis: $framePath');
+        bovinoBloc.add(AnalizarFrameEvent(framePath));
       });
 
       _logger.i('Captura de frames iniciada');

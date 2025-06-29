@@ -80,17 +80,48 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configurar variables de entorno
-El archivo `.env` se crea automáticamente con valores por defecto:
+El archivo `.env` se crea automáticamente con valores por defecto. Para personalizar la configuración:
+
+```bash
+# Opción 1: Usar el script automático
+python create_env.py
+
+# Opción 2: Crear manualmente desde la plantilla
+cp env_template.txt .env
+```
+
+**Variables disponibles:**
 ```env
+# Configuración del servidor
 HOST=0.0.0.0
 PORT=8000
 DEBUG=True
+
+# Configuración del modelo
 MODEL_PATH=models/bovino_model.h5
+LABELS_PATH=models/class_labels.json
+
+# Configuración de imágenes
 IMAGE_SIZE=224
 BATCH_SIZE=32
+
+# Configuración de peso estimado
 MIN_WEIGHT=200.0
 MAX_WEIGHT=1200.0
+
+# Configuración de logging
+LOG_LEVEL=INFO
+LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+# Configuración de CORS
+ALLOWED_ORIGINS=*
+
+# Configuración de cola de análisis
+MAX_QUEUE_SIZE=100
+FRAME_TIMEOUT_HOURS=1
 ```
+
+**📝 Nota:** El archivo `.env` está en `.gitignore` por seguridad. Los valores por defecto están en `config/settings.py`.
 
 ### 4. Ejecutar servidor
 ```bash
@@ -239,29 +270,3 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 docker build -t bovino-server .
 docker run -p 8000:8000 bovino-server
 ```
-
-## 📝 Logs
-
-El servidor incluye logging detallado:
-- **INFO**: Operaciones normales
-- **WARNING**: Advertencias
-- **ERROR**: Errores de procesamiento
-- **DEBUG**: Información detallada (solo en desarrollo)
-
-## 🔗 Integración con Flutter
-
-El servidor está diseñado para trabajar con la aplicación Flutter:
-- **CORS** configurado para permitir conexiones
-- **Endpoints** optimizados para envío de imágenes
-- **Respuestas** en formato JSON compatible
-- **Análisis asíncrono** para mejor UX
-
-## 📄 Documentación API
-
-Una vez ejecutado el servidor, la documentación automática está disponible en:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
----
-
-*Servidor desarrollado siguiendo Clean Architecture, optimizado para análisis de ganado bovino en tiempo real.* 

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 import 'package:get_it/get_it.dart';
+import 'package:camera/camera.dart';
 import '../../core/services/camera_service.dart' as camera_service;
 import '../../core/services/permission_service.dart';
 import '../../core/constants/app_colors.dart';
@@ -11,6 +12,8 @@ import '../../core/constants/app_messages.dart';
 // BLoCs
 import '../blocs/camera_bloc.dart';
 import '../blocs/frame_analysis_bloc.dart';
+import '../blocs/bovino_bloc.dart';
+import '../../domain/repositories/bovino_repository.dart';
 
 // Atoms
 import '../widgets/atoms/custom_text.dart';
@@ -40,14 +43,44 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     _initializeServices();
     _initializeBlocs();
     _requestPermissions();
+    
+    // Escuchar cambios en el estado de la cámara
+    _cameraBloc.stream.listen((state) {
+      _logger.i('📷 Estado de cámara cambiado: $state');
+      if (state is CameraReady) {
+        _logger.i('✅ Cámara lista - Controller inicializado: ${_cameraBloc.cameraService.controller?.value.isInitialized}');
+      } else if (state is CameraError) {
+        _logger.e('❌ Error en cámara: ${state.failure.message}');
+      }
+    });
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _cameraBloc.close();
-    _frameAnalysisBloc.close();
-    super.dispose();
+    try {
+      _logger.i('🧹 Liberando recursos de CameraPage...');
+      
+      // Detener análisis si está activo
+      if (_isAnalyzing) {
+        _stopAnalysis();
+      }
+      
+      // Liberar recursos de cámara
+      _cameraBloc.add(DisposeCamera());
+      
+      // Remover observer
+      WidgetsBinding.instance.removeObserver(this);
+      
+      // Cerrar BLoCs
+      _cameraBloc.close();
+      _frameAnalysisBloc.close();
+      
+      _logger.i('✅ Recursos de CameraPage liberados correctamente');
+    } catch (e) {
+      _logger.e('❌ Error al liberar recursos de CameraPage: $e');
+    } finally {
+      super.dispose();
+    }
   }
 
   @override
@@ -86,7 +119,16 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             GetIt.instance.isRegistered<camera_service.CameraService>()
                 ? GetIt.instance<camera_service.CameraService>()
                 : camera_service.CameraService();
-        _cameraBloc = CameraBloc(cameraService: cameraService);
+        
+        // Obtener BovinoBloc o crear uno nuevo
+        final bovinoBloc = GetIt.instance.isRegistered<BovinoBloc>()
+            ? GetIt.instance<BovinoBloc>()
+            : BovinoBloc(repository: GetIt.instance<BovinoRepository>());
+        
+        _cameraBloc = CameraBloc(
+          cameraService: cameraService,
+          bovinoBloc: bovinoBloc,
+        );
         _logger.w(
           '⚠️ CameraBloc no registrado en GetIt, creando manualmente en CameraPage',
         );
@@ -105,7 +147,11 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       _logger.e('❌ Error al obtener BLoCs en CameraPage: $e');
       // Fallback: crear con servicios por defecto
       final cameraService = camera_service.CameraService();
-      _cameraBloc = CameraBloc(cameraService: cameraService);
+      final bovinoBloc = BovinoBloc(repository: GetIt.instance<BovinoRepository>());
+      _cameraBloc = CameraBloc(
+        cameraService: cameraService,
+        bovinoBloc: bovinoBloc,
+      );
       _frameAnalysisBloc = FrameAnalysisBloc();
     }
   }
@@ -147,6 +193,9 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   void _initializeCamera() {
     _logger.i('📷 Inicializando cámara...');
+    _logger.i('🔍 Estado actual de CameraBloc: ${_cameraBloc.state}');
+    _logger.i('🔍 CameraService inicializado: ${_cameraBloc.cameraService.isInitialized}');
+    _logger.i('🔍 CameraController disponible: ${_cameraBloc.cameraService.controller != null}');
     _cameraBloc.add(InitializeCamera());
   }
 
@@ -166,13 +215,27 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   }
 
   void _stopAnalysis() {
-    _logger.i('⏹️ Deteniendo análisis de frames...');
-    setState(() {
-      _isAnalyzing = false;
-    });
+    try {
+      _logger.i('⏹️ Deteniendo análisis de frames...');
+      
+      setState(() {
+        _isAnalyzing = false;
+      });
 
-    _frameAnalysisBloc.add(const StopFrameAnalysisEvent());
-    _cameraBloc.add(StopCapture());
+      // Detener análisis de frames
+      _frameAnalysisBloc.add(const StopFrameAnalysisEvent());
+      
+      // Detener captura de cámara
+      _cameraBloc.add(StopCapture());
+      
+      _logger.i('✅ Análisis detenido correctamente');
+    } catch (e) {
+      _logger.e('❌ Error al detener análisis: $e');
+      // Asegurar que el estado se actualice incluso si hay error
+      setState(() {
+        _isAnalyzing = false;
+      });
+    }
   }
 
   void _showPermissionDeniedDialog() {
@@ -270,9 +333,28 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         ),
         child: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.contentTextLight),
-          onPressed: () {
-            _stopAnalysis();
-            Navigator.of(context).pop();
+          onPressed: () async {
+            try {
+              _logger.i('🔙 Navegando hacia atrás...');
+              
+              // Detener análisis si está activo
+              if (_isAnalyzing) {
+                _stopAnalysis();
+                // Esperar un poco para que se detenga correctamente
+                await Future.delayed(const Duration(milliseconds: 500));
+              }
+              
+              // Navegar hacia atrás
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
+            } catch (e) {
+              _logger.e('❌ Error al navegar hacia atrás: $e');
+              // Intentar navegar de todas formas
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
+            }
           },
         ),
       ),
@@ -362,62 +444,103 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(17),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.darkSurface,
-                      AppColors.darkCardBackground,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    const Center(
-                      child: Icon(
-                        Icons.camera_alt,
-                        size: 80,
-                        color: AppColors.contentTextLight,
-                      ),
-                    ),
-                    if (_isAnalyzing)
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.success,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.fiber_manual_record,
-                                color: AppColors.contentTextLight,
-                                size: 12,
+              child: Stack(
+                children: [
+                  // Vista real de la cámara
+                  SizedBox.expand(
+                    child: _cameraBloc.cameraService.controller != null && 
+                           _cameraBloc.cameraService.controller!.value.isInitialized
+                        ? FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: _cameraBloc.cameraService.controller!.value.previewSize?.width ?? 640,
+                              height: _cameraBloc.cameraService.controller!.value.previewSize?.height ?? 480,
+                              child: CameraPreview(_cameraBloc.cameraService.controller!),
+                            ),
+                          )
+                        : Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.darkSurface,
+                                  AppColors.darkCardBackground,
+                                ],
                               ),
-                              SizedBox(width: 4),
-                              Text(
-                                AppMessages.analyzingStatus,
-                                style: TextStyle(
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.camera_alt,
+                                  size: 80,
                                   color: AppColors.contentTextLight,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Cámara no inicializada',
+                                  style: TextStyle(
+                                    color: AppColors.contentTextLight,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Controller: ${_cameraBloc.cameraService.controller != null ? "Disponible" : "No disponible"}',
+                                  style: TextStyle(
+                                    color: AppColors.contentTextLight.withValues(alpha: 0.7),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  'Inicializado: ${_cameraBloc.cameraService.isInitialized ? "Sí" : "No"}',
+                                  style: TextStyle(
+                                    color: AppColors.contentTextLight.withValues(alpha: 0.7),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                  ),
+                  // Overlay de análisis
+                  if (_isAnalyzing)
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fiber_manual_record,
+                              color: AppColors.contentTextLight,
+                              size: 12,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              AppMessages.analyzingStatus,
+                              style: TextStyle(
+                                color: AppColors.contentTextLight,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           );
@@ -476,149 +599,70 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildControlPanel() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.contentTextLight.withValues(alpha: 0.2),
-            AppColors.contentTextLight.withValues(alpha: 0.1),
-          ],
-        ),
+        color: AppColors.contentTextLight.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.contentTextLight.withValues(alpha: 0.3),
+          width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Botón principal
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors:
-                    _isAnalyzing
-                        ? [
-                          AppColors.error,
-                          AppColors.error.withValues(alpha: 0.8),
-                        ]
-                        : [
-                          AppColors.success,
-                          AppColors.success.withValues(alpha: 0.8),
-                        ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (_isAnalyzing ? AppColors.error : AppColors.success)
-                      .withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
+          // Botón principal de análisis
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
               onPressed: _isAnalyzing ? _stopAnalysis : _startAnalysis,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
+                backgroundColor: _isAnalyzing ? AppColors.error : AppColors.success,
+                foregroundColor: AppColors.contentTextLight,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isAnalyzing ? Icons.stop : Icons.play_arrow,
-                    color: AppColors.contentTextLight,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _isAnalyzing
-                        ? AppMessages.stopAnalysis
-                        : AppMessages.startAnalysis,
-                    style: const TextStyle(
-                      color: AppColors.contentTextLight,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              icon: Icon(_isAnalyzing ? Icons.stop : Icons.play_arrow),
+              label: Text(
+                _isAnalyzing ? AppMessages.stopAnalysis : AppMessages.startAnalysis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-
-          // Estado del análisis
-          BlocBuilder<FrameAnalysisBloc, FrameAnalysisState>(
-            builder: (context, state) {
-              Color statusColor = AppColors.lightGrey;
-              String statusText = AppMessages.waiting;
-              IconData statusIcon = Icons.pause;
-
-              if (state is FrameAnalysisProcessing) {
-                statusColor = AppColors.warning;
-                statusText =
-                    '${AppMessages.processing}: ${state.pendingFrames}';
-                statusIcon = Icons.sync;
-              } else if (state is FrameAnalysisSuccess) {
-                statusColor = AppColors.success;
-                statusText = AppMessages.completed;
-                statusIcon = Icons.check_circle;
-              } else if (state is FrameAnalysisError) {
-                statusColor = AppColors.error;
-                statusText = AppMessages.error;
-                statusIcon = Icons.error;
-              }
-
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+          
+          const SizedBox(height: 12),
+          
+          // Botón de debug para reinicializar cámara
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                _logger.i('🔧 Reinicializando cámara desde debug...');
+                _cameraBloc.add(DisposeCamera());
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  _initializeCamera();
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.warning,
+                side: BorderSide(color: AppColors.warning),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      statusColor.withValues(alpha: 0.3),
-                      statusColor.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      statusIcon,
-                      color: AppColors.contentTextLight,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    CustomText(
-                      text: statusText,
-                      style: const TextStyle(
-                        color: AppColors.contentTextLight,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+              ),
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text(
+                'Reinicializar Cámara',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
           ),
         ],
       ),

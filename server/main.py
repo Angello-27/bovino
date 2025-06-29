@@ -1,3 +1,5 @@
+import os
+import warnings
 from fastapi import (
     FastAPI,
     UploadFile,
@@ -15,6 +17,14 @@ import asyncio
 from datetime import datetime, timedelta
 import uuid
 from pydantic import BaseModel
+
+# Configurar warnings globales
+from warnings_config import configure_warnings, configure_openCV_warnings, configure_tensorflow_warnings
+
+# Aplicar configuración de warnings
+configure_warnings()
+configure_openCV_warnings()
+configure_tensorflow_warnings()
 
 from models.api_models import BovinoModel, BovinoAnalysisRequest, BovinoAnalysisResponse
 from services.tensorflow_service import TensorFlowService
@@ -120,7 +130,7 @@ async def health_check():
 @app.post("/submit-frame", response_model=FrameAnalysisResponse)
 async def submit_frame(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)
+    frame: UploadFile = File(...)
 ):
     """
     Enviar frame para análisis asíncrono
@@ -132,7 +142,7 @@ async def submit_frame(
     """
     try:
         # Validar archivo
-        if not file.content_type.startswith('image/'):
+        if not frame.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
         
         # Generar ID único
@@ -140,7 +150,7 @@ async def submit_frame(
         timestamp = datetime.now()
         
         # Leer contenido del archivo
-        image_content = await file.read()
+        image_content = await frame.read()
         
         # Crear entrada en cola
         analysis_queue[frame_id] = {
