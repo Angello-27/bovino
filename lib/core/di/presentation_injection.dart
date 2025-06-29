@@ -6,10 +6,14 @@ import '../../presentation/blocs/camera_bloc.dart';
 import '../../presentation/blocs/bovino_bloc.dart';
 import '../../presentation/blocs/theme_bloc.dart';
 import '../../presentation/blocs/splash_bloc.dart';
+import '../../presentation/blocs/connectivity_bloc.dart';
+import '../../presentation/blocs/frame_analysis_bloc.dart';
 
 // Services
 import '../services/camera_service.dart';
 import '../services/splash_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/frame_analysis_service.dart';
 
 // Data
 import '../../domain/repositories/bovino_repository.dart';
@@ -25,6 +29,8 @@ class PresentationInjection {
     // Obtener dependencias desde GetIt después de que estén registradas
     final cameraService = _getIt<CameraService>();
     final splashService = _getIt<SplashService>();
+    final connectivityService = _getIt<ConnectivityService>();
+    final frameAnalysisService = _getIt<FrameAnalysisService>();
     final repository = _getIt<BovinoRepository>();
 
     _getIt.registerFactory<CameraBloc>(
@@ -41,6 +47,14 @@ class PresentationInjection {
       () => SplashBloc(splashService: splashService),
     );
 
+    _getIt.registerFactory<ConnectivityBloc>(
+      () => ConnectivityBloc(connectivityService: connectivityService),
+    );
+
+    _getIt.registerFactory<FrameAnalysisBloc>(
+      () => FrameAnalysisBloc(frameAnalysisService: frameAnalysisService),
+    );
+
     _logger.i('🔧 Presentation Layer configured successfully');
   }
 
@@ -55,4 +69,10 @@ class PresentationInjection {
 
   /// Obtiene la instancia de SplashBloc
   static SplashBloc get splashBloc => _getIt<SplashBloc>();
+
+  /// Obtiene la instancia de ConnectivityBloc
+  static ConnectivityBloc get connectivityBloc => _getIt<ConnectivityBloc>();
+
+  /// Obtiene la instancia de FrameAnalysisBloc
+  static FrameAnalysisBloc get frameAnalysisBloc => _getIt<FrameAnalysisBloc>();
 }

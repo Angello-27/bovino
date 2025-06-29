@@ -11,7 +11,6 @@ import 'core/routes/app_router.dart';
 
 // Presentation
 import 'presentation/blocs/theme_bloc.dart';
-// import 'presentation/widgets/molecules/theme_error_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

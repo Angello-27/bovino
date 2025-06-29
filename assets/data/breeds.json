@@ -1,0 +1,180 @@
+{
+  "breeds": [
+    {
+      "id": "holstein",
+      "name": "Holstein",
+      "description": "Raza lechera por excelencia",
+      "characteristics": [
+        "Blanco y negro",
+        "Alta producción lechera",
+        "Temperamento dócil",
+        "Adaptable a diferentes climas"
+      ],
+      "averageWeight": 650,
+      "weightRange": {
+        "min": 500,
+        "max": 800
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "angus",
+      "name": "Angus",
+      "description": "Raza de carne de alta calidad",
+      "characteristics": [
+        "Negro sólido",
+        "Excelente calidad de carne",
+        "Sin cuernos",
+        "Madurez temprana"
+      ],
+      "averageWeight": 750,
+      "weightRange": {
+        "min": 600,
+        "max": 900
+      },
+      "confidence": 0.92
+    },
+    {
+      "id": "brahman",
+      "name": "Brahman",
+      "description": "Raza resistente al calor",
+      "characteristics": [
+        "Joroba característica",
+        "Resistente al calor",
+        "Piel suelta",
+        "Orejas largas"
+      ],
+      "averageWeight": 700,
+      "weightRange": {
+        "min": 550,
+        "max": 850
+      },
+      "confidence": 0.88
+    },
+    {
+      "id": "hereford",
+      "name": "Hereford",
+      "description": "Raza de doble propósito",
+      "characteristics": [
+        "Cabeza blanca",
+        "Cuerpo rojo",
+        "Doble propósito",
+        "Temperamento tranquilo"
+      ],
+      "averageWeight": 680,
+      "weightRange": {
+        "min": 550,
+        "max": 800
+      },
+      "confidence": 0.90
+    },
+    {
+      "id": "simmental",
+      "name": "Simmental",
+      "description": "Raza suiza de doble propósito",
+      "characteristics": [
+        "Blanco y rojo",
+        "Doble propósito",
+        "Crecimiento rápido",
+        "Buena fertilidad"
+      ],
+      "averageWeight": 720,
+      "weightRange": {
+        "min": 600,
+        "max": 850
+      },
+      "confidence": 0.87
+    },
+    {
+      "id": "charolais",
+      "name": "Charolais",
+      "description": "Raza francesa de carne",
+      "characteristics": [
+        "Blanco cremoso",
+        "Excelente carne",
+        "Crecimiento rápido",
+        "Musculatura desarrollada"
+      ],
+      "averageWeight": 750,
+      "weightRange": {
+        "min": 600,
+        "max": 900
+      },
+      "confidence": 0.89
+    },
+    {
+      "id": "limousin",
+      "name": "Limousin",
+      "description": "Raza francesa de carne magra",
+      "characteristics": [
+        "Dorado claro",
+        "Carne magra",
+        "Eficiencia alimenticia",
+        "Buena conformación"
+      ],
+      "averageWeight": 700,
+      "weightRange": {
+        "min": 550,
+        "max": 850
+      },
+      "confidence": 0.85
+    },
+    {
+      "id": "jersey",
+      "name": "Jersey",
+      "description": "Raza lechera pequeña",
+      "characteristics": [
+        "Marrón claro",
+        "Leche rica en grasa",
+        "Tamaño pequeño",
+        "Eficiente conversión"
+      ],
+      "averageWeight": 450,
+      "weightRange": {
+        "min": 350,
+        "max": 550
+      },
+      "confidence": 0.93
+    },
+    {
+      "id": "guernsey",
+      "name": "Guernsey",
+      "description": "Raza lechera de isla",
+      "characteristics": [
+        "Marrón y blanco",
+        "Leche dorada",
+        "Temperamento dócil",
+        "Buena adaptabilidad"
+      ],
+      "averageWeight": 500,
+      "weightRange": {
+        "min": 400,
+        "max": 600
+      },
+      "confidence": 0.86
+    },
+    {
+      "id": "ayrshire",
+      "name": "Ayrshire",
+      "description": "Raza lechera escocesa",
+      "characteristics": [
+        "Rojo y blanco",
+        "Leche equilibrada",
+        "Resistente",
+        "Buena longevidad"
+      ],
+      "averageWeight": 550,
+      "weightRange": {
+        "min": 450,
+        "max": 650
+      },
+      "confidence": 0.84
+    }
+  ],
+  "metadata": {
+    "totalBreeds": 10,
+    "lastUpdated": "2025-01-29",
+    "version": "1.0.0",
+    "description": "Datos de razas de ganado bovino para análisis con IA"
+  }
+} 

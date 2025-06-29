@@ -97,4 +97,28 @@ class AppMessages {
   // Mensajes de debug
   static const String debugFrameSent = 'Frame enviado al servidor';
   static const String debugFrameReceived = 'Frame recibido del servidor';
+
+  // Mensajes de UI específicos
+  static const String changeTheme = 'Cambiar tema';
+  static const String intelligentAnalysis = 'Análisis Inteligente';
+  static const String startAnalysis = 'Iniciar Análisis';
+  static const String stopAnalysis = 'Detener';
+  static const String mainFeatures = 'Características Principales';
+  static const String liveCamera = 'Cámara en Vivo';
+  static const String autoCapture = 'Captura automática';
+  static const String advancedAI = 'IA Avanzada';
+  static const String tensorFlow = 'TensorFlow';
+  static const String fastAnalysis = 'Análisis Rápido';
+  static const String instantResults = 'Resultados instantáneos';
+  static const String analyzingStatus = 'ANALIZANDO';
+  static const String waiting = 'En espera';
+  static const String completed = 'Completado';
+  static const String analysisResult = 'Resultado del Análisis';
+  static const String breed = 'Raza';
+  static const String estimatedWeight = 'Peso estimado';
+  static const String confidence = 'Confianza';
+  static const String notDetected = 'No detectada';
+  static const String notAvailable = 'No disponible';
+  static const String kg = 'kg';
+  static const String percent = '%';
 }

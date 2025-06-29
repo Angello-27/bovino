@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 // Core
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/app_messages.dart';
 // import '../../core/di/dependency_injection.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/splash_service.dart';
@@ -132,7 +133,7 @@ class _SplashPageState extends State<SplashPage>
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.contentTextLight,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -159,7 +160,7 @@ class _SplashPageState extends State<SplashPage>
                 opacity: _fadeAnimation,
                 child: const TitleText(
                   text: AppConstants.appName,
-                  color: Colors.white,
+                  color: AppColors.contentTextLight,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
@@ -171,7 +172,7 @@ class _SplashPageState extends State<SplashPage>
                 opacity: _fadeAnimation,
                 child: const BodyText(
                   text: AppConstants.appDescription,
-                  color: Colors.white,
+                  color: AppColors.contentTextLight,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -185,7 +186,7 @@ class _SplashPageState extends State<SplashPage>
               // Indicador de progreso
               if (state is SplashLoading || state is SplashCheckingServer)
                 const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.contentTextLight),
                 ),
             ],
           ),
@@ -195,23 +196,23 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Widget _buildStatusIndicator(SplashState state) {
-    String message = 'Iniciando aplicación...';
+    String message = AppMessages.ready;
     IconData icon = Icons.settings;
 
     if (state is SplashLoading) {
       message = state.message;
       icon = Icons.settings;
     } else if (state is SplashCheckingServer) {
-      message = 'Verificando conexión al servidor...';
+      message = AppMessages.helpConnection;
       icon = Icons.cloud;
     } else if (state is SplashReady) {
       message =
           state.serverAvailable
-              ? 'Servidor conectado'
-              : 'Servidor no disponible';
+              ? AppMessages.success
+              : AppMessages.serverUnavailable;
       icon = state.serverAvailable ? Icons.cloud_done : Icons.cloud_off;
     } else if (state is SplashError) {
-      message = 'Error al inicializar';
+      message = AppMessages.error;
       icon = Icons.error;
     }
 
@@ -220,9 +221,9 @@ class _SplashPageState extends State<SplashPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white, size: 20),
+          Icon(icon, color: AppColors.contentTextLight, size: 20),
           const SizedBox(width: 8),
-          CaptionText(text: message, color: Colors.white),
+          CaptionText(text: message, color: AppColors.contentTextLight),
         ],
       ),
     );
