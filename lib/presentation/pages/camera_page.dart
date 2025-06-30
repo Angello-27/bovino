@@ -360,7 +360,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.contentTextLight.withValues(alpha: 0.2),
+          color: AppColors.contentTextLight.withOpacity(0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: IconButton(
@@ -413,6 +413,11 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   Widget _buildCameraSection() {
     return BlocBuilder<CameraBloc, CameraState>(
       builder: (context, state) {
+        _logger.d('🔍 Renderizando cámara - Estado: $state');
+        _logger.d('🔍 Controller disponible: ${_cameraBloc.cameraService.controller != null}');
+        _logger.d('🔍 Controller inicializado: ${_cameraBloc.cameraService.controller?.value.isInitialized}');
+        _logger.d('🔍 CameraService inicializado: ${_cameraBloc.cameraService.isInitialized}');
+        
         if (state is CameraInitial) {
           return Stack(
             children: [
@@ -459,6 +464,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             ],
           );
         } else if (state is CameraReady) {
+          _logger.i('✅ Renderizando CameraReady - Mostrando vista de cámara');
           return Stack(
             children: [
               // Vista real de la cámara
@@ -491,7 +497,42 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
               ),
             ],
           );
+        } else if (state is CameraCapturing) {
+          _logger.i('✅ Renderizando CameraCapturing - Mostrando vista de cámara');
+          return Stack(
+            children: [
+              // Vista real de la cámara (mismo que CameraReady)
+              SizedBox.expand(
+                child: _cameraBloc.cameraService.controller != null && 
+                       _cameraBloc.cameraService.controller!.value.isInitialized
+                    ? FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _cameraBloc.cameraService.controller!.value.previewSize?.width ?? 640,
+                          height: _cameraBloc.cameraService.controller!.value.previewSize?.height ?? 480,
+                          child: CameraPreview(_cameraBloc.cameraService.controller!),
+                        ),
+                      )
+                    : _buildCameraNotInitialized(),
+              ),
+              // Overlay de análisis
+              if (_isAnalyzing)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: _buildAnalysisOverlay(),
+                ),
+              // Botón de control en la parte inferior
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
+              ),
+            ],
+          );
         } else {
+          _logger.w('⚠️ Estado desconocido: $state - Mostrando placeholder');
           return Stack(
             children: [
               _buildCameraPlaceholder(
