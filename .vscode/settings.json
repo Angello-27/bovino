@@ -19,5 +19,18 @@
     "css.lint.validProperties": [],
     "css.lint.invalidProperties": [],
     "stylelint.validate": ["css", "scss", "less"],
-    "stylelint.enable": false
+    "stylelint.enable": false,
+    "python.analysis.extraPaths": [
+        "./server"
+    ],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./server",
+        "-p",
+        "*_test.py"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.defaultInterpreterPath": "./server/.venv/Scripts/python.exe"
 }

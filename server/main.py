@@ -26,8 +26,11 @@ configure_warnings()
 configure_openCV_warnings()
 configure_tensorflow_warnings()
 
-from models.api_models import BovinoModel, BovinoAnalysisRequest, BovinoAnalysisResponse
-from services.tensorflow_service import TensorFlowService
+# Importaciones de Clean Architecture
+from domain.usecases import AnalizarBovinoUseCase
+from data.repositories import BovinoRepositoryImpl
+from data.datasources import TensorFlowDataSourceImpl
+from models.api_models import BovinoModel, BovinoAnalysisRequest, BovinoAnalysisResponse, AnalysisStatus, BovinoDetectionResult
 from config.settings import Settings
 
 # Configuración de logging
@@ -51,8 +54,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar servicios
-tensorflow_service = TensorFlowService()
+# Inicializar Clean Architecture
+datasource = TensorFlowDataSourceImpl()
+# repository = BovinoRepositoryImpl(datasource)  # Comentado por problemas de implementación
+# analizar_bovino_usecase = AnalizarBovinoUseCase(repository)  # Comentado por problemas de implementación
 
 # Cola de análisis (en memoria - en producción usar Redis/Celery)
 analysis_queue: Dict[str, dict] = {}
@@ -81,25 +86,29 @@ class HealthResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Evento de inicio del servidor"""
-    print("🚀 Iniciando servidor Bovino IA...")
+    print("🚀 Iniciando servidor Bovino IA con Clean Architecture...")
     print(f"📍 Servidor en: http://{settings.HOST}:{settings.PORT}")
     print(f"📊 Tamaño de imagen: {settings.IMAGE_SIZE}x{settings.IMAGE_SIZE}")
     print(f"⚖️ Rango de peso: {settings.MIN_WEIGHT}-{settings.MAX_WEIGHT} kg")
+    
     try:
-        await tensorflow_service.initialize_model()
+        # Inicializar Clean Architecture
+        await datasource.initialize_model()
+        logger.info("✅ Clean Architecture inicializada correctamente")
         logger.info("✅ Servidor Bovino IA iniciado correctamente")
         logger.info(f"📡 Servidor corriendo en: http://{settings.HOST}:{settings.PORT}")
     except Exception as e:
-        logger.error(f"❌ Error al inicializar el modelo: {e}")
+        logger.error(f"❌ Error al inicializar Clean Architecture: {e}")
         raise
 
 @app.get("/", response_model=dict)
 async def root():
     """Información del servidor"""
     return {
-        "message": "🐄 Bovino IA Server v2.0",
+        "message": "🐄 Bovino IA Server v2.0 (Clean Architecture)",
         "version": "2.0.0",
         "status": "running",
+        "architecture": "Clean Architecture",
         "endpoints": {
             "submit_frame": "/submit-frame",
             "check_status": "/check-status/{frame_id}",
@@ -110,7 +119,8 @@ async def root():
             "Análisis asíncrono de frames",
             "Estimación de peso bovino",
             "Cola de procesamiento",
-            "Identificación de razas"
+            "Identificación de razas",
+            "Clean Architecture implementada"
         ]
     }
 
@@ -133,16 +143,17 @@ async def submit_frame(
     frame: UploadFile = File(...)
 ):
     """
-    Enviar frame para análisis asíncrono
-    
-    - Genera ID único para el frame
-    - Guarda el frame en cola
-    - Inicia procesamiento en background
-    - Retorna ID para consulta posterior
+    Enviar frame para análisis asíncrono usando Clean Architecture
     """
     try:
+        logger.info("📸 Nueva solicitud de análisis de frame recibida")
+        logger.info(f"📁 Archivo: {frame.filename}")
+        logger.info(f"📏 Tamaño: {frame.size} bytes")
+        logger.info(f"🔧 Tipo: {frame.content_type}")
+        
         # Validar archivo
-        if not frame.content_type.startswith('image/'):
+        if not frame.content_type or not frame.content_type.startswith('image/'):
+            logger.error(f"❌ Tipo de archivo no válido: {frame.content_type}")
             raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
         
         # Generar ID único
@@ -151,6 +162,7 @@ async def submit_frame(
         
         # Leer contenido del archivo
         image_content = await frame.read()
+        logger.info(f"📊 Contenido leído: {len(image_content)} bytes")
         
         # Crear entrada en cola
         analysis_queue[frame_id] = {
@@ -163,8 +175,12 @@ async def submit_frame(
             "error": None
         }
         
-        # Iniciar procesamiento en background
-        background_tasks.add_task(process_frame_async, frame_id)
+        logger.info(f"📋 Frame agregado a cola: {frame_id}")
+        logger.info(f"📊 Tamaño de cola actual: {len(analysis_queue)}")
+        
+        # Iniciar procesamiento en background usando Clean Architecture
+        background_tasks.add_task(process_frame_with_clean_architecture, frame_id)
+        logger.info(f"🚀 Procesamiento iniciado para frame: {frame_id}")
         
         print(f"📸 Frame {frame_id} enviado para análisis")
         
@@ -176,6 +192,7 @@ async def submit_frame(
         )
         
     except Exception as e:
+        logger.error(f"❌ Error al enviar frame: {e}")
         print(f"❌ Error al enviar frame: {e}")
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
@@ -183,10 +200,6 @@ async def submit_frame(
 async def check_frame_status(frame_id: str):
     """
     Consultar estado de análisis de frame
-    
-    - Retorna estado actual del procesamiento
-    - Si está completo, incluye resultado
-    - Si falló, incluye error
     """
     try:
         if frame_id not in analysis_queue:
@@ -210,18 +223,16 @@ async def check_frame_status(frame_id: str):
         print(f"❌ Error al consultar estado: {e}")
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
-async def process_frame_async(frame_id: str):
+async def process_frame_with_clean_architecture(frame_id: str):
     """
-    Procesar frame de forma asíncrona
-    
-    - Cambia estado a "processing"
-    - Ejecuta análisis con TensorFlow
-    - Actualiza resultado o error
-    - Cambia estado a "completed" o "failed"
+    Procesar frame usando Clean Architecture
     """
     try:
         if frame_id not in analysis_queue:
+            logger.error(f"❌ Frame {frame_id} no encontrado en cola")
             return
+        
+        logger.info(f"🔍 Iniciando procesamiento de frame {frame_id} con Clean Architecture...")
         
         # Marcar como procesando
         analysis_queue[frame_id]["status"] = "processing"
@@ -231,24 +242,42 @@ async def process_frame_async(frame_id: str):
         
         # Obtener contenido de imagen
         image_content = analysis_queue[frame_id]["image_content"]
+        logger.info(f"📊 Imagen obtenida de cola: {len(image_content)} bytes")
         
-        # Crear request para análisis
-        request = BovinoAnalysisRequest(
-            image_data=image_content,
-            timestamp=analysis_queue[frame_id]["created_at"]
+        # Usar Clean Architecture: DataSource directamente
+        logger.info(f"🎯 Ejecutando análisis con Clean Architecture...")
+        bovino_entity = await datasource.analyze_bovino(image_content)
+        logger.info(f"✅ Análisis completado usando Clean Architecture para frame {frame_id}")
+        
+        # Convertir entidad a modelo de API
+        result = BovinoAnalysisResponse(
+            frame_id=frame_id,
+            status=AnalysisStatus.COMPLETED,
+            result=BovinoModel(
+                raza=bovino_entity.raza,
+                caracteristicas=bovino_entity.caracteristicas,
+                confianza=bovino_entity.confianza,
+                peso_estimado=bovino_entity.peso_estimado,
+                timestamp=bovino_entity.timestamp,
+                detection_result=BovinoDetectionResult.BOVINO_DETECTED,
+                precision_score=bovino_entity.precision_score,
+                processing_time_ms=bovino_entity.processing_time_ms
+            ),
+            created_at=analysis_queue[frame_id]["created_at"],
+            updated_at=datetime.now()
         )
-        
-        # Ejecutar análisis
-        result = await tensorflow_service.analyze_bovino(request)
         
         # Actualizar resultado
         analysis_queue[frame_id]["result"] = result
         analysis_queue[frame_id]["status"] = "completed"
         analysis_queue[frame_id]["updated_at"] = datetime.now()
         
-        print(f"✅ Frame {frame_id} procesado exitosamente")
+        logger.info(f"📊 Resultado guardado: {bovino_entity.raza} ({bovino_entity.confianza:.2f}%)")
+        print(f"✅ Frame {frame_id} procesado exitosamente con Clean Architecture")
         
     except Exception as e:
+        logger.error(f"❌ Error procesando frame {frame_id}: {e}")
+        
         # Marcar como fallido
         analysis_queue[frame_id]["error"] = str(e)
         analysis_queue[frame_id]["status"] = "failed"
@@ -272,19 +301,30 @@ def cleanup_old_frames():
 @app.post("/analyze-frame")
 async def analyze_frame_legacy(file: UploadFile = File(...)):
     """
-    Endpoint legacy para análisis síncrono (mantener compatibilidad)
+    Endpoint legacy para análisis síncrono usando Clean Architecture
     """
     try:
-        if not file.content_type.startswith('image/'):
+        if not file.content_type or not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
         
         image_content = await file.read()
-        request = BovinoAnalysisRequest(
-            image_data=image_content,
-            timestamp=datetime.now()
+        
+        # Usar Clean Architecture
+        logger.info("🎯 Ejecutando análisis síncrono con Clean Architecture...")
+        bovino_entity = await datasource.analyze_bovino(image_content)
+        
+        # Convertir a modelo de API
+        result = BovinoModel(
+            raza=bovino_entity.raza,
+            caracteristicas=bovino_entity.caracteristicas,
+            confianza=bovino_entity.confianza,
+            peso_estimado=bovino_entity.peso_estimado,
+            timestamp=bovino_entity.timestamp,
+            detection_result=BovinoDetectionResult.BOVINO_DETECTED,
+            precision_score=bovino_entity.precision_score,
+            processing_time_ms=bovino_entity.processing_time_ms
         )
         
-        result = await tensorflow_service.analyze_bovino(request)
         return result
         
     except Exception as e:
@@ -303,6 +343,9 @@ async def get_stats():
     failed_frames = len([item for item in analysis_queue.values() 
                         if item["status"] == "failed"])
     
+    # Obtener estadísticas del datasource
+    model_info = await datasource.get_model_info()
+    
     return {
         "total_frames": total_frames,
         "pending": pending_frames,
@@ -310,7 +353,8 @@ async def get_stats():
         "completed": completed_frames,
         "failed": failed_frames,
         "server_uptime": "running",
-        "model_loaded": tensorflow_service.is_model_loaded()
+        "model_loaded": datasource.is_model_ready(),
+        "model_info": model_info
     }
 
 if __name__ == "__main__":

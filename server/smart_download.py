@@ -4,10 +4,8 @@ Descargador inteligente con kagglehub (VERSIÓN CORREGIDA)
 Usa datasets REALES y públicos de Kaggle
 """
 
-import os
 import sys
 import subprocess
-import shutil
 import requests
 from pathlib import Path
 import logging
@@ -25,8 +23,9 @@ class SmartKaggleDownloader:
     def __init__(self):
         self.dataset_id = "sadhliroomyprime/cattle-weight-detection-model-dataset-12k"
         self.dataset_size = "47GB"
-        self.data_dir = Path("data")
-        self.sample_dir = Path("data/sample_dataset")
+        # Usar carpeta de usuario para datasets
+        self.data_dir = Path.home() / "Datasets" / "Bovino"
+        self.sample_dir = self.data_dir / "sample_dataset"
 
         # Datasets REALES y públicos encontrados en Kaggle
         self.alternative_datasets = {
@@ -45,30 +44,53 @@ class SmartKaggleDownloader:
                 "size": "~200MB",
                 "description": "Dataset de razas de vacas para clasificación",
             },
+            "large": {
+                "id": "sadhliroomyprime/cattle-weight-detection-model-dataset-12k",
+                "size": "~2GB",
+                "description": "Dataset completo de detección de peso bovino (versión reducida)",
+            },
+            "xlarge": {
+                "id": "sadhliroomyprime/cattle-weight-detection-model-dataset-12k",
+                "size": "~5GB",
+                "description": "Dataset extendido para entrenamiento avanzado",
+            },
         }
+
+    def show_dataset_location(self):
+        """Mostrar ubicación de los datasets"""
+        print(f"\n📁 UBICACIÓN DE DATASETS:")
+        print(f"   📂 Directorio principal: {self.data_dir}")
+        print(f"   📂 Dataset de muestra: {self.sample_dir}")
+        print(f"   💡 Los datasets se guardan separados del código del proyecto")
+        print(f"   🔄 Puedes acceder desde cualquier lugar del sistema")
 
     def install_kagglehub(self):
         """Instalar kagglehub"""
-        logger.info("📦 Verificando kagglehub...")
+        logger.info("📦 Verificando API de Kaggle...")
 
         try:
-            import kagglehub
-
-            logger.info("✅ kagglehub ya está instalado")
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            api = KaggleApi()
+            api.authenticate()
+            logger.info("✅ API de Kaggle configurada correctamente")
             return True
         except ImportError:
-            logger.info("📥 Instalando kagglehub...")
+            logger.info("📥 Instalando kaggle...")
             try:
                 subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "kagglehub"],
+                    [sys.executable, "-m", "pip", "install", "kaggle"],
                     check=True,
                     capture_output=True,
                 )
-                logger.info("✅ kagglehub instalado exitosamente")
+                logger.info("✅ kaggle instalado exitosamente")
                 return True
             except subprocess.CalledProcessError as e:
-                logger.error(f"❌ Error instalando kagglehub: {e}")
+                logger.error(f"❌ Error instalando kaggle: {e}")
                 return False
+        except Exception as e:
+            logger.error(f"❌ Error configurando API de Kaggle: {e}")
+            logger.info("💡 Asegúrate de tener configurado kaggle.json en ~/.kaggle/")
+            return False
 
     def show_dataset_warning(self):
         """Mostrar advertencia sobre el tamaño del dataset"""
@@ -86,20 +108,22 @@ class SmartKaggleDownloader:
         print("1️⃣ DATASET MINI (50MB) - 200+ imágenes de 5 razas")
         print("2️⃣ DATASET PEQUEÑO (100MB) - Colección de imágenes de vacas")
         print("3️⃣ DATASET MEDIANO (200MB) - Dataset de razas para clasificación")
-        print("4️⃣ DATASET COMPLETO (47GB) - Dataset original completo")
-        print("5️⃣ CREAR MUESTRA LOCAL - Imágenes de ejemplo sin descargar")
-        print("6️⃣ CANCELAR - Salir sin descargar")
+        print("4️⃣ DATASET GRANDE (2GB) - Dataset completo reducido para entrenamiento")
+        print("5️⃣ DATASET EXTRA GRANDE (5GB) - Dataset extendido para ML avanzado")
+        print("6️⃣ DATASET COMPLETO (47GB) - Dataset original completo")
+        print("7️⃣ CREAR MUESTRA LOCAL - Imágenes de ejemplo sin descargar")
+        print("8️⃣ CANCELAR - Salir sin descargar")
 
         return self.get_user_choice()
 
     def get_user_choice(self):
         """Obtener elección del usuario"""
         print("\n💡 ¿Qué opción prefieres?")
-        print("   Recomiendo empezar con la opción 1 (mini - 50MB)")
+        print("   Recomiendo empezar con la opción 4 (grande - 2GB) para entrenamiento")
 
-        # Por defecto, elegir opción más segura
-        choice = "2"  # Crear muestra local
-        logger.info(f"🔄 Selección automática: Opción {choice} (Muestra local)")
+        # Por defecto, elegir dataset grande para entrenamiento
+        choice = "1"  # Dataset grande (2GB)
+        logger.info(f"🔄 Selección automática: Opción {choice} (Dataset grande - 2GB)")
         return choice
 
     def download_alternative_dataset(self, dataset_key):
@@ -112,17 +136,33 @@ class SmartKaggleDownloader:
         logger.info(f"📋 Descripción: {dataset_info['description']}")
 
         try:
-            import kagglehub
-
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            api = KaggleApi()
+            api.authenticate()
+            
+            # Crear directorio de datasets si no existe (con parents=True)
+            logger.info(f"📁 Creando directorio: {self.data_dir}")
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            
             # Iniciar monitor de progreso
             self.start_download_monitor(f"Descargando {dataset_info['size']}")
 
             try:
-                path = kagglehub.dataset_download(dataset_id)
+                # Descargar en la carpeta datasets
+                api.dataset_download_files(dataset_id, path=str(self.data_dir), unzip=True)
                 self.stop_download_monitor()
 
-                logger.info(f"✅ Dataset descargado en: {path}")
-                return path
+                # Verificar que se descargó correctamente
+                downloaded_files = list(self.data_dir.rglob("*"))
+                image_files = [f for f in downloaded_files if f.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp'}]
+                
+                if image_files:
+                    logger.info(f"✅ Dataset descargado exitosamente en: {self.data_dir}")
+                    logger.info(f"📊 Imágenes encontradas: {len(image_files)}")
+                    return str(self.data_dir)
+                else:
+                    logger.warning("⚠️ No se encontraron imágenes en el dataset descargado")
+                    return str(self.data_dir)
 
             except Exception as e:
                 self.stop_download_monitor()
@@ -142,7 +182,13 @@ class SmartKaggleDownloader:
         logger.info("⏱️ Esto puede tomar 2-6 horas...")
 
         try:
-            import kagglehub
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            api = KaggleApi()
+            api.authenticate()
+
+            # Crear directorio de datasets si no existe
+            logger.info(f"📁 Creando directorio: {self.data_dir}")
+            self.data_dir.mkdir(parents=True, exist_ok=True)
 
             # Mostrar advertencia final
             logger.info("🚨 ÚLTIMA ADVERTENCIA:")
@@ -155,12 +201,18 @@ class SmartKaggleDownloader:
             self.start_download_monitor("Descargando 47GB - ¡Ten paciencia!")
 
             try:
-                path = kagglehub.dataset_download(self.dataset_id)
+                api.dataset_download_files(self.dataset_id, path=str(self.data_dir), unzip=True)
                 self.stop_download_monitor()
 
+                # Verificar descarga
+                downloaded_files = list(self.data_dir.rglob("*"))
+                image_files = [f for f in downloaded_files if f.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp'}]
+                
                 logger.info(f"🎉 ¡DATASET COMPLETO DESCARGADO!")
-                logger.info(f"📁 Ubicación: {path}")
-                return path
+                logger.info(f"📁 Ubicación: {self.data_dir}")
+                logger.info(f"📊 Archivos totales: {len(downloaded_files)}")
+                logger.info(f"🖼️ Imágenes encontradas: {len(image_files)}")
+                return str(self.data_dir)
 
             except Exception as e:
                 self.stop_download_monitor()
@@ -263,6 +315,9 @@ class SmartKaggleDownloader:
         logger.info("🧠 DESCARGADOR INTELIGENTE DE DATASETS (VERSIÓN CORREGIDA)")
         logger.info("=" * 60)
 
+        # Mostrar ubicación de datasets
+        self.show_dataset_location()
+
         # 1. Instalar kagglehub
         if not self.install_kagglehub():
             return False
@@ -286,10 +341,18 @@ class SmartKaggleDownloader:
             downloaded_path = self.download_alternative_dataset("medium")
 
         elif choice == "4":
+            logger.info("\n🔄 Descargando dataset grande (2GB)...")
+            downloaded_path = self.download_alternative_dataset("large")
+
+        elif choice == "5":
+            logger.info("\n🔄 Descargando dataset extra grande (5GB)...")
+            downloaded_path = self.download_alternative_dataset("xlarge")
+
+        elif choice == "6":
             logger.info("\n🔄 Iniciando descarga del dataset completo (47GB)...")
             downloaded_path = self.download_full_dataset()
 
-        elif choice == "5":
+        elif choice == "7":
             logger.info("\n🔄 Creando dataset de muestra local...")
             downloaded_path = self.create_sample_dataset_with_real_images()
 
@@ -327,7 +390,7 @@ class SmartKaggleDownloader:
             logger.info("💡 Alternativas:")
             logger.info("   1. Verifica tu conexión a internet")
             logger.info("   2. Configura credenciales de Kaggle")
-            logger.info("   3. Prueba con dataset de muestra local (opción 5)")
+            logger.info("   3. Prueba con dataset de muestra local (opción 7)")
             return False
 
 

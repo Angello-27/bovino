@@ -45,7 +45,7 @@ class TensorFlowService:
             "Hereford": ["Rojo y blanco", "Cuornos cortos", "Rustico", "Buen temperamento"],
             "Holstein": ["Blanco y negro", "Grande", "Lechera", "Alta producción"],
             "Jersey": ["Marrón claro", "Pequeña", "Lechera", "Alta grasa"],
-            "Brahman": ["Gris", "Joroba", "Resistente al calor", "Cuernos largos"],
+            "Brahman": ["Gris", "Joroba", "Resistente al calor", "Cuornos largos"],
             "Charolais": ["Blanco", "Grande", "Musculoso", "Cárnico"],
             "Limousin": ["Dorado", "Musculoso", "Cárnico", "Eficiente"],
             "Simmental": ["Rojo y blanco", "Grande", "Doble propósito", "Gentil"],
@@ -57,13 +57,34 @@ class TensorFlowService:
         """Inicializar el modelo de TensorFlow"""
         try:
             logger.info("🤖 Inicializando modelo de TensorFlow...")
+            logger.info(f"📁 Directorio de trabajo: {os.getcwd()}")
+            logger.info(f"🔧 Configuración de imagen: {self.settings.IMAGE_SIZE}x{self.settings.IMAGE_SIZE}")
+
+            # Verificar si existe un modelo real
+            model_path = getattr(self.settings, 'MODEL_PATH', None)
+            if model_path and os.path.exists(model_path):
+                logger.info(f"📦 Modelo encontrado en: {model_path}")
+                logger.info(f"📊 Tamaño del modelo: {os.path.getsize(model_path)} bytes")
+                # Aquí cargarías el modelo real
+                # self.model = tf.keras.models.load_model(model_path)
+            else:
+                logger.warning(f"⚠️ No se encontró modelo en: {model_path}")
+                logger.info("🔧 Creando modelo de demostración...")
 
             # En un entorno real, cargarías un modelo pre-entrenado
             # Por ahora, creamos un modelo simple para demostración
             self.model = self._create_demo_model()
+            logger.info("✅ Modelo de demostración creado")
 
             # Cargar etiquetas de clases
             self.class_labels = self.settings.BOVINE_BREEDS
+            logger.info(f"🏷️ Etiquetas de razas cargadas: {len(self.class_labels)} razas")
+            logger.info(f"📋 Razas disponibles: {', '.join(self.class_labels)}")
+
+            # Verificar características de razas
+            logger.info("🏷️ Características de razas configuradas:")
+            for breed, chars in self.settings.BREED_CHARACTERISTICS.items():
+                logger.info(f"   {breed}: {chars}")
 
             self.model_ready = True
             logger.info(f"✅ Modelo inicializado con {len(self.class_labels)} clases")
@@ -73,6 +94,11 @@ class TensorFlowService:
             
             self.is_initialized = True
             logger.info("✅ Modelo TensorFlow inicializado correctamente")
+            logger.info("📝 NOTA: Este es un modelo de demostración. Para usar tu dataset:")
+            logger.info("   1. Entrena tu modelo con TensorFlow/Keras")
+            logger.info("   2. Guarda el modelo como .h5 o .pb")
+            logger.info("   3. Configura MODEL_PATH en settings.py")
+            logger.info("   4. Modifica _create_demo_model() para cargar tu modelo")
 
         except Exception as e:
             logger.error(f"❌ Error al inicializar modelo: {e}")
@@ -119,22 +145,37 @@ class TensorFlowService:
             if not self.model_ready:
                 raise Exception("Modelo no inicializado")
 
+            logger.info("🔍 Iniciando análisis de imagen...")
+            logger.info(f"📏 Tamaño de imagen recibida: {len(image_data)} bytes")
+
             # Preprocesar la imagen
             image = self._preprocess_image(image_data)
+            logger.info(f"🖼️ Imagen preprocesada: {image.shape}")
 
             # Realizar predicción
             prediction = await self._predict_breed(image)
+            logger.info(f"🎯 Predicción obtenida: {prediction.shape}")
 
             # Obtener raza y confianza
             breed_index = np.argmax(prediction)
             confidence = float(prediction[breed_index])
             breed = self.class_labels[breed_index]
 
+            logger.info(f"🐄 Raza detectada: {breed} (índice: {breed_index})")
+            logger.info(f"📊 Confianza: {confidence:.4f} ({confidence*100:.2f}%)")
+
+            # Mostrar todas las predicciones
+            logger.info("📋 Todas las predicciones:")
+            for i, (label, prob) in enumerate(zip(self.class_labels, prediction)):
+                logger.info(f"   {i+1}. {label}: {prob:.4f} ({prob*100:.2f}%)")
+
             # Obtener características de la raza
             characteristics = self.settings.BREED_CHARACTERISTICS.get(breed, [])
+            logger.info(f"🏷️ Características de {breed}: {characteristics}")
 
             # Estimar peso basado en la raza y características de la imagen
-            estimated_weight = self._estimate_weight(breed, confidence, image)
+            estimated_weight = self._estimate_weight_from_breed(breed, confidence, image)
+            logger.info(f"⚖️ Peso estimado: {estimated_weight:.1f} kg")
 
             # Crear resultado
             result = BovinoModel(
@@ -145,12 +186,13 @@ class TensorFlowService:
             )
 
             self.total_analyses += 1
-            logger.info(f"📊 Análisis #{self.total_analyses} completado")
+            logger.info(f"✅ Análisis #{self.total_analyses} completado exitosamente")
+            logger.info(f"📈 Total de análisis realizados: {self.total_analyses}")
 
             return result
 
         except Exception as e:
-            logger.error(f"Error en análisis de bovino: {e}")
+            logger.error(f"❌ Error en análisis de bovino: {e}")
             raise
 
     def _preprocess_image(self, image_data: bytes) -> np.ndarray:
@@ -184,13 +226,26 @@ class TensorFlowService:
     async def _predict_breed(self, image: np.ndarray) -> np.ndarray:
         """Realizar predicción de raza"""
         try:
-            # En un entorno real, usarías el modelo entrenado
-            # Por ahora, simulamos una predicción
-            prediction = self._simulate_prediction()
+            logger.info("🎯 Iniciando predicción de raza...")
+            
+            # Verificar el modelo
+            if self.model is None:
+                logger.warning("⚠️ Modelo es None, usando predicción simulada")
+                prediction = self._simulate_prediction()
+            else:
+                logger.info(f"🤖 Usando modelo: {type(self.model).__name__}")
+                logger.info(f"📊 Arquitectura del modelo: {len(self.model.layers)} capas")
+                
+                # En un entorno real, usarías el modelo entrenado
+                # Por ahora, simulamos una predicción
+                prediction = self._simulate_prediction()
+                logger.info("📝 Nota: Usando predicción simulada (modelo de demostración)")
+            
+            logger.info(f"🎯 Predicción completada: {prediction.shape}")
             return prediction
 
         except Exception as e:
-            logger.error(f"Error en predicción: {e}")
+            logger.error(f"❌ Error en predicción: {e}")
             raise
 
     def _simulate_prediction(self) -> np.ndarray:
@@ -208,7 +263,7 @@ class TensorFlowService:
 
         return prediction
 
-    def _estimate_weight(
+    def _estimate_weight_from_breed(
         self, breed: str, confidence: float, image: np.ndarray
     ) -> float:
         """Estimar peso basado en raza, confianza y características de la imagen"""
@@ -272,7 +327,7 @@ class TensorFlowService:
             image = self._bytes_to_image(image_data)
             
             # Preprocesar imagen
-            processed_image = self._preprocess_image(image)
+            processed_image = self._preprocess_image_array(image)
             
             # Detectar si hay bovino en la imagen
             detection_result, confidence = await self._detect_bovino(processed_image)
@@ -306,7 +361,7 @@ class TensorFlowService:
                 breed_result = await self._classify_breed(processed_image)
                 
                 # Estimar peso basado en características visuales
-                estimated_weight = self._estimate_weight(breed_result, processed_image)
+                estimated_weight = self._estimate_weight_from_breed(breed_result['breed'], breed_result['confidence'], processed_image)
                 
                 processing_time = int((time.time() - start_time) * 1000)
                 
@@ -345,7 +400,7 @@ class TensorFlowService:
             logger.error(f"Error al convertir bytes a imagen: {e}")
             raise
 
-    def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
+    def _preprocess_image_array(self, image: np.ndarray) -> np.ndarray:
         """Preprocesar imagen para análisis"""
         try:
             # Redimensionar a tamaño estándar
@@ -385,7 +440,7 @@ class TensorFlowService:
             # (En producción usarías un modelo entrenado)
             if mean_color > 0.3 and mean_color < 0.8 and std_color > 0.1:
                 # Características que sugieren presencia de bovino
-                confidence = min(0.9, 0.5 + (std_color * 2))
+                confidence = float(min(0.9, 0.5 + (std_color * 2)))
                 return BovinoDetectionResult.BOVINO_DETECTED, confidence
             elif mean_color > 0.2 and mean_color < 0.9:
                 # Posible bovino pero incierto

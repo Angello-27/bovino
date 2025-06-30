@@ -20,6 +20,7 @@ import '../../presentation/blocs/camera_bloc.dart';
 import '../../presentation/blocs/bovino_bloc.dart';
 import '../../presentation/blocs/theme_bloc.dart';
 import '../../presentation/blocs/splash_bloc.dart';
+import '../../presentation/blocs/connectivity_bloc.dart';
 
 // Repositories
 import '../../domain/repositories/bovino_repository.dart';
@@ -198,6 +199,15 @@ class DependencyInjection {
     } catch (e) {
       _logger.w('⚠️ ThemeBloc no disponible, creando nuevo');
       return ThemeBloc();
+    }
+  }
+
+  static ConnectivityBloc get connectivityBloc {
+    try {
+      return _getIt<ConnectivityBloc>();
+    } catch (e) {
+      _logger.w('⚠️ ConnectivityBloc no disponible, creando nuevo');
+      return ConnectivityBloc(connectivityService: connectivityService);
     }
   }
 

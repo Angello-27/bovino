@@ -31,6 +31,7 @@ class CameraService {
   // Captura de frames
   Timer? _frameCaptureTimer;
   bool _isCapturing = false;
+  bool _isCapturingFrame = false;
   int _capturedFramesCount = 0;
   
   // Streams
@@ -207,6 +208,14 @@ class CameraService {
         return null;
       }
       
+      // 🔒 Protección contra capturas simultáneas
+      if (_isCapturingFrame) {
+        _logger.w('⚠️ Captura en progreso, saltando frame');
+        return null;
+      }
+      
+      _isCapturingFrame = true;
+      
       // Capturar imagen
       final image = await _controller!.takePicture();
       
@@ -237,6 +246,9 @@ class CameraService {
     } catch (e) {
       _logger.e('❌ Error en captura de frame: $e');
       return null;
+    } finally {
+      // 🔓 Liberar el lock de captura
+      _isCapturingFrame = false;
     }
   }
 
