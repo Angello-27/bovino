@@ -139,6 +139,11 @@ class ThemeFactory {
       fillColor: fillColor,
       contentPadding: AppUIConfig.inputPadding,
       hintStyle: TextStyle(color: hintColor),
+      isDense: false,
+      constraints: const BoxConstraints(
+        minHeight: AppUIConfig.inputMinHeight,
+        maxHeight: double.infinity,
+      ),
     );
   }
 

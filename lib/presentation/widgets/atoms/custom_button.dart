@@ -30,39 +30,56 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor ?? AppColors.primary,
-        foregroundColor: textColor ?? AppColors.contentTextLight,
-        padding: padding ?? AppUIConfig.buttonPadding,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            borderRadius ?? AppUIConfig.borderRadius,
-          ),
-        ),
-        elevation: AppUIConfig.buttonElevation,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: AppUIConfig.buttonMinHeight,
       ),
-      child:
-          isLoading
-              ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-              : icon != null
-              ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: AppUIConfig.iconSize),
-                  const SizedBox(width: 8),
-                  Text(text),
-                ],
-              )
-              : Text(text),
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor ?? AppColors.primary,
+          foregroundColor: textColor ?? AppColors.contentTextLight,
+          padding: padding ?? AppUIConfig.buttonPadding,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              borderRadius ?? AppUIConfig.borderRadius,
+            ),
+          ),
+          elevation: AppUIConfig.buttonElevation,
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child:
+            isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : icon != null
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: AppUIConfig.iconSize),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          text,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  )
+                : Flexible(
+                    child: Text(
+                      text,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+      ),
     );
   }
 }
@@ -86,23 +103,40 @@ class CustomTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: textColor ?? AppColors.primary,
-        padding: padding ?? AppUIConfig.textButtonPadding,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: AppUIConfig.buttonMinHeight,
       ),
-      child:
-          icon != null
-              ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: AppUIConfig.iconSize),
-                  const SizedBox(width: 8),
-                  Text(text),
-                ],
-              )
-              : Text(text),
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: textColor ?? AppColors.primary,
+          padding: padding ?? AppUIConfig.textButtonPadding,
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child:
+            icon != null
+                ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: AppUIConfig.iconSize),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        text,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                )
+                : Flexible(
+                    child: Text(
+                      text,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+      ),
     );
   }
 }

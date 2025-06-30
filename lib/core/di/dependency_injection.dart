@@ -54,6 +54,59 @@ class DependencyInjection {
     }
   }
 
+  /// Inicializa solo las dependencias críticas para el lanzamiento rápido
+  static Future<void> initializeCritical() async {
+    _logger.i('⚡ Starting critical dependency injection...');
+
+    try {
+      // 1. Solo infraestructura básica (HTTP)
+      await _initializeInfrastructure();
+
+      // 2. Solo servicios esenciales (sin cámara ni conectividad)
+      _initializeEssentialServices();
+
+      // 3. Capa de datos básica
+      await _initializeData();
+
+      // 4. Solo BLoCs esenciales
+      _initializeEssentialPresentation();
+
+      _logger.i('✅ Critical dependencies initialized successfully');
+    } catch (e) {
+      _logger.e('❌ Error initializing critical dependencies: $e');
+      // No rethrow para permitir que la app continúe
+    }
+  }
+
+  /// Inicializa solo servicios esenciales (sin cámara ni conectividad)
+  static void _initializeEssentialServices() {
+    _logger.i('🔧 Setting up essential services...');
+
+    // Solo servicios que no requieren hardware o red
+    _getIt.registerSingleton<SplashService>(SplashService());
+    _logger.d('✅ SplashService registered');
+
+    _logger.i('🔧 Essential Services configured successfully');
+  }
+
+  /// Inicializa solo la presentación esencial
+  static void _initializeEssentialPresentation() {
+    _logger.i('🎨 Setting up essential presentation...');
+
+    try {
+      // Solo BLoCs esenciales
+      _getIt.registerFactory<ThemeBloc>(() => ThemeBloc());
+      _logger.d('✅ ThemeBloc registered');
+
+      _getIt.registerFactory<SplashBloc>(() => SplashBloc(splashService: _getIt<SplashService>()));
+      _logger.d('✅ SplashBloc registered');
+
+      _logger.i('🎨 Essential presentation configured successfully');
+    } catch (e) {
+      _logger.e('❌ Essential presentation initialization failed: $e');
+    }
+  }
+
   /// Inicializa la infraestructura con manejo de errores
   static Future<void> _initializeInfrastructure() async {
     _logger.i('🔧 Initializing infrastructure...');
@@ -179,5 +232,79 @@ class DependencyInjection {
   static Future<void> reset() async {
     await _getIt.reset();
     _logger.i('🔄 Dependencies reset');
+  }
+
+  /// Inicializa las dependencias pesadas de forma asíncrona (para usar en splash screen)
+  static Future<void> initializeHeavyDependencies() async {
+    _logger.i('🏋️ Starting heavy dependency injection...');
+
+    try {
+      // 1. Inicializar servicios pesados (cámara, conectividad)
+      await _initializeHeavyServices();
+
+      // 2. Inicializar BLoCs pesados
+      await _initializeHeavyPresentation();
+
+      _logger.i('✅ Heavy dependencies initialized successfully');
+    } catch (e) {
+      _logger.e('❌ Error initializing heavy dependencies: $e');
+      // No rethrow para permitir que la app continúe
+    }
+  }
+
+  /// Inicializa servicios pesados (cámara, conectividad)
+  static Future<void> _initializeHeavyServices() async {
+    _logger.i('🔧 Setting up heavy services...');
+
+    try {
+      // CameraService (puede tardar en inicializar)
+      _getIt.registerSingleton<CameraService>(CameraService());
+      _logger.d('✅ CameraService registered');
+
+      // PermissionService
+      _getIt.registerSingleton<PermissionService>(PermissionService());
+      _logger.d('✅ PermissionService registered');
+
+      // ConnectivityService (puede tardar en verificar servidor)
+      _getIt.registerSingleton<ConnectivityService>(ConnectivityService(_getIt<Dio>()));
+      _logger.d('✅ ConnectivityService registered');
+
+      // FrameAnalysisService
+      _getIt.registerSingleton<FrameAnalysisService>(
+        FrameAnalysisService(_getIt<Dio>()),
+      );
+      _logger.d('✅ FrameAnalysisService registered');
+
+      // Conectar CameraService con FrameAnalysisService
+      final cameraService = _getIt<CameraService>();
+      final frameAnalysisService = _getIt<FrameAnalysisService>();
+      cameraService.setFrameAnalysisService(frameAnalysisService);
+      _logger.d('✅ CameraService connected to FrameAnalysisService');
+
+      _logger.i('🔧 Heavy Services configured successfully');
+    } catch (e) {
+      _logger.e('❌ Heavy services initialization failed: $e');
+    }
+  }
+
+  /// Inicializa BLoCs pesados
+  static Future<void> _initializeHeavyPresentation() async {
+    _logger.i('🎨 Setting up heavy presentation...');
+
+    try {
+      // BLoCs que requieren servicios pesados
+      _getIt.registerFactory<CameraBloc>(() => CameraBloc(
+        cameraService: _getIt<CameraService>(),
+        bovinoBloc: _getIt<BovinoBloc>(),
+      ));
+      _logger.d('✅ CameraBloc registered');
+
+      _getIt.registerFactory<BovinoBloc>(() => BovinoBloc(repository: _getIt<BovinoRepository>()));
+      _logger.d('✅ BovinoBloc registered');
+
+      _logger.i('🎨 Heavy presentation configured successfully');
+    } catch (e) {
+      _logger.e('❌ Heavy presentation initialization failed: $e');
+    }
   }
 }

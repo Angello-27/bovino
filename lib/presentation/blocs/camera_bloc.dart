@@ -6,6 +6,7 @@ import 'dart:async';
 import '../../core/services/camera_service.dart';
 import '../../core/errors/failures.dart';
 import 'bovino_bloc.dart';
+import 'frame_analysis_bloc.dart';
 
 // Eventos para CameraBloc
 abstract class CameraEvent extends Equatable {
@@ -67,6 +68,12 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   
   // Stream subscription
   StreamSubscription<String>? _frameSubscription;
+  
+  // Control de análisis
+  bool _analysisEnabled = false;
+  
+  // Referencia al FrameAnalysisBloc
+  FrameAnalysisBloc? _frameAnalysisBloc;
 
   CameraBloc({
     required this.cameraService,
@@ -78,6 +85,24 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     on<PauseCapture>(_onPauseCapture);
     on<ResumeCapture>(_onResumeCapture);
     on<DisposeCamera>(_onDisposeCamera);
+  }
+
+  /// Establecer referencia al FrameAnalysisBloc
+  void setFrameAnalysisBloc(FrameAnalysisBloc frameAnalysisBloc) {
+    _frameAnalysisBloc = frameAnalysisBloc;
+    _logger.i('✅ FrameAnalysisBloc configurado en CameraBloc');
+  }
+
+  /// Activar envío de frames para análisis
+  void enableAnalysis() {
+    _analysisEnabled = true;
+    _logger.i('✅ Análisis de frames activado');
+  }
+
+  /// Desactivar envío de frames para análisis
+  void disableAnalysis() {
+    _analysisEnabled = false;
+    _logger.i('⏹️ Análisis de frames desactivado');
   }
 
   Future<void> _onInitializeCamera(
@@ -106,21 +131,23 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     // Cancelar suscripción anterior si existe
     _frameSubscription?.cancel();
     
-    // Crear nueva suscripción
+    // Crear nueva suscripción - SOLO para captura, NO para análisis automático
     _frameSubscription = cameraService.frameStream.listen(
       (framePath) {
         _logger.d('Frame capturado: $framePath');
         
-        // Enviar frame al BovinoBloc para análisis
-        _logger.i('📤 Enviando frame para análisis: $framePath');
-        bovinoBloc.add(AnalizarFrameEvent(framePath));
+        // Enviar frame al FrameAnalysisBloc SOLO si el análisis está activado
+        if (_analysisEnabled) {
+          _logger.i('📤 Enviando frame para análisis: $framePath');
+          _frameAnalysisBloc?.add(ProcessFrameEvent(framePath: framePath));
+        }
       },
       onError: (error) {
         _logger.e('Error en stream de frames: $error');
       },
     );
     
-    _logger.i('✅ Suscripción al stream de frames configurada');
+    _logger.i('✅ Suscripción al stream de frames configurada (análisis controlado)');
   }
 
   Future<void> _onStartCapture(

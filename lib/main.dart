@@ -19,9 +19,9 @@ void main() async {
   Logger.level = Level.debug;
 
   try {
-    // Inicializar dependencias
-    await DependencyInjection.initialize();
-    Logger().i('✅ Dependencias inicializadas correctamente');
+    // Inicializar solo dependencias críticas para el lanzamiento
+    await DependencyInjection.initializeCritical();
+    Logger().i('✅ Dependencias críticas inicializadas correctamente');
   } catch (e, stackTrace) {
     Logger().e('❌ Error crítico en inicialización: $e');
     Logger().e('Stack trace: $stackTrace');

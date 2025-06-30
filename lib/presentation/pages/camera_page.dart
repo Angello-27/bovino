@@ -35,7 +35,6 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   bool _permissionsGranted = false;
   bool _isAnalyzing = false;
-  bool _isPaused = false;
 
   @override
   void initState() {
@@ -51,16 +50,6 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     // Configurar listener del CameraBloc
     _cameraBloc.stream.listen((state) {
       _logger.d('📷 Estado de CameraBloc cambiado: $state');
-      
-      if (state is CameraReady) {
-        setState(() {
-          _isPaused = true; // Cuando está ready, significa que está pausado
-        });
-      } else if (state is CameraCapturing) {
-        setState(() {
-          _isPaused = false; // Cuando está capturando, no está pausado
-        });
-      }
     });
     
     _requestPermissions();
@@ -164,6 +153,10 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
           '⚠️ FrameAnalysisBloc no registrado en GetIt, creando manualmente en CameraPage',
         );
       }
+      
+      // Configurar referencia del FrameAnalysisBloc en CameraBloc
+      _cameraBloc.setFrameAnalysisBloc(_frameAnalysisBloc);
+      
     } catch (e) {
       _logger.e('❌ Error al obtener BLoCs en CameraPage: $e');
       // Fallback: crear con servicios por defecto
@@ -174,6 +167,9 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         bovinoBloc: bovinoBloc,
       );
       _frameAnalysisBloc = FrameAnalysisBloc();
+      
+      // Configurar referencia
+      _cameraBloc.setFrameAnalysisBloc(_frameAnalysisBloc);
     }
   }
 
@@ -217,7 +213,17 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     _logger.i('🔍 Estado actual de CameraBloc: ${_cameraBloc.state}');
     _logger.i('🔍 CameraService inicializado: ${_cameraBloc.cameraService.isInitialized}');
     _logger.i('🔍 CameraController disponible: ${_cameraBloc.cameraService.controller != null}');
+    
+    // Inicializar cámara
     _cameraBloc.add(InitializeCamera());
+    
+    // Después de un breve delay, iniciar captura de frames (sin análisis)
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted && _permissionsGranted) {
+        _logger.i('🎬 Iniciando captura de frames (sin análisis)...');
+        _cameraBloc.add(StartCapture());
+      }
+    });
   }
 
   void _startAnalysis() {
@@ -231,8 +237,13 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       _isAnalyzing = true;
     });
 
+    // Activar envío de frames para análisis en CameraBloc
+    _cameraBloc.enableAnalysis();
+    
+    // Iniciar el análisis de frames
     _frameAnalysisBloc.add(const StartFrameAnalysisEvent());
-    _cameraBloc.add(StartCapture());
+    
+    _logger.i('✅ Análisis iniciado - Cámara continúa funcionando');
   }
 
   void _stopAnalysis() {
@@ -243,31 +254,19 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         _isAnalyzing = false;
       });
 
+      // Desactivar envío de frames para análisis en CameraBloc
+      _cameraBloc.disableAnalysis();
+      
       // Detener análisis de frames
       _frameAnalysisBloc.add(const StopFrameAnalysisEvent());
       
-      // Detener captura de cámara
-      _cameraBloc.add(StopCapture());
-      
-      _logger.i('✅ Análisis detenido correctamente');
+      _logger.i('✅ Análisis detenido - Cámara continúa funcionando');
     } catch (e) {
       _logger.e('❌ Error al detener análisis: $e');
       // Asegurar que el estado se actualice incluso si hay error
       setState(() {
         _isAnalyzing = false;
       });
-    }
-  }
-
-  void _togglePauseCapture() {
-    setState(() {
-      _isPaused = !_isPaused;
-    });
-
-    if (_isPaused) {
-      _cameraBloc.add(PauseCapture());
-    } else {
-      _cameraBloc.add(ResumeCapture());
     }
   }
 
@@ -395,192 +394,117 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   }
 
   Widget _buildBody() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.contentTextLight.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.contentTextLight.withValues(alpha: 0.3),
-          width: 1,
+    return Column(
+      children: [
+        // Cuadro de cámara más alto (60%) con botón integrado
+        Expanded(
+          flex: 6,
+          child: _buildCameraSection(),
         ),
-      ),
-      child: Column(
-        children: [
-          // Vista de cámara
-          Expanded(flex: 3, child: _buildCameraView()),
-
-          // Panel de control
-          Expanded(flex: 1, child: _buildControlPanel()),
-
-          // Resultados
-          Expanded(flex: 2, child: _buildResultsPanel()),
-        ],
-      ),
+        // Panel de resultados más pequeño (40%) con márgenes
+        Expanded(
+          flex: 4,
+          child: _buildResultsSection(),
+        ),
+      ],
     );
   }
 
-  Widget _buildCameraView() {
+  Widget _buildCameraSection() {
     return BlocBuilder<CameraBloc, CameraState>(
       builder: (context, state) {
         if (state is CameraInitial) {
-          return _buildCameraPlaceholder(
-            '🔄 Inicializando cámara...',
-            AppColors.info,
+          return Stack(
+            children: [
+              _buildCameraPlaceholder(
+                '🔄 Inicializando cámara...',
+                AppColors.info,
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
+              ),
+            ],
           );
         } else if (state is CameraLoading) {
-          return _buildCameraPlaceholder(
-            '⏳ Cargando cámara...',
-            AppColors.warning,
+          return Stack(
+            children: [
+              _buildCameraPlaceholder(
+                '⏳ Cargando cámara...',
+                AppColors.warning,
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
+              ),
+            ],
           );
         } else if (state is CameraError) {
-          return _buildCameraPlaceholder(
-            '❌ Error: ${state.failure.message}',
-            AppColors.error,
+          return Stack(
+            children: [
+              _buildCameraPlaceholder(
+                '❌ Error: ${state.failure.message}',
+                AppColors.error,
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
+              ),
+            ],
           );
         } else if (state is CameraReady) {
-          return Container(
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors:
-                    _isAnalyzing
-                        ? [
-                          AppColors.success.withValues(alpha: 0.3),
-                          AppColors.success.withValues(alpha: 0.1),
-                        ]
-                        : [
-                          AppColors.contentTextLight.withValues(alpha: 0.2),
-                          AppColors.contentTextLight.withValues(alpha: 0.1),
-                        ],
+          return Stack(
+            children: [
+              // Vista real de la cámara
+              SizedBox.expand(
+                child: _cameraBloc.cameraService.controller != null && 
+                       _cameraBloc.cameraService.controller!.value.isInitialized
+                    ? FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _cameraBloc.cameraService.controller!.value.previewSize?.width ?? 640,
+                          height: _cameraBloc.cameraService.controller!.value.previewSize?.height ?? 480,
+                          child: CameraPreview(_cameraBloc.cameraService.controller!),
+                        ),
+                      )
+                    : _buildCameraNotInitialized(),
               ),
-              border: Border.all(
-                color:
-                    _isAnalyzing
-                        ? AppColors.success
-                        : AppColors.contentTextLight.withValues(alpha: 0.5),
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      _isAnalyzing
-                          ? AppColors.success.withValues(alpha: 0.5)
-                          : Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
+              // Overlay de análisis
+              if (_isAnalyzing)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: _buildAnalysisOverlay(),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(17),
-              child: Stack(
-                children: [
-                  // Vista real de la cámara
-                  SizedBox.expand(
-                    child: _cameraBloc.cameraService.controller != null && 
-                           _cameraBloc.cameraService.controller!.value.isInitialized
-                        ? FittedBox(
-                            fit: BoxFit.cover,
-                            child: SizedBox(
-                              width: _cameraBloc.cameraService.controller!.value.previewSize?.width ?? 640,
-                              height: _cameraBloc.cameraService.controller!.value.previewSize?.height ?? 480,
-                              child: CameraPreview(_cameraBloc.cameraService.controller!),
-                            ),
-                          )
-                        : Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppColors.darkSurface,
-                                  AppColors.darkCardBackground,
-                                ],
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.camera_alt,
-                                  size: 80,
-                                  color: AppColors.contentTextLight,
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Cámara no inicializada',
-                                  style: TextStyle(
-                                    color: AppColors.contentTextLight,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Controller: ${_cameraBloc.cameraService.controller != null ? "Disponible" : "No disponible"}',
-                                  style: TextStyle(
-                                    color: AppColors.contentTextLight.withValues(alpha: 0.7),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  'Inicializado: ${_cameraBloc.cameraService.isInitialized ? "Sí" : "No"}',
-                                  style: TextStyle(
-                                    color: AppColors.contentTextLight.withValues(alpha: 0.7),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                  // Overlay de análisis
-                  if (_isAnalyzing)
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.success,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.fiber_manual_record,
-                              color: AppColors.contentTextLight,
-                              size: 12,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              AppMessages.analyzingStatus,
-                              style: TextStyle(
-                                color: AppColors.contentTextLight,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+              // Botón de control en la parte inferior
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
               ),
-            ),
+            ],
           );
         } else {
-          return _buildCameraPlaceholder(
-            '📷 Cámara no disponible',
-            AppColors.lightGrey,
+          return Stack(
+            children: [
+              _buildCameraPlaceholder(
+                '📷 Cámara no disponible',
+                AppColors.lightGrey,
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildControlButton(),
+              ),
+            ],
           );
         }
       },
@@ -589,22 +513,12 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildCameraPlaceholder(String message, Color color) {
     return Container(
-      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
         ),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       child: Center(
         child: Column(
@@ -630,73 +544,47 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildControlPanel() {
+  Widget _buildCameraNotInitialized() {
     return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppColors.contentTextLight.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.contentTextLight.withValues(alpha: 0.3),
-          width: 1,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.darkSurface,
+            AppColors.darkCardBackground,
+          ],
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Botón principal de análisis
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isAnalyzing ? _stopAnalysis : _startAnalysis,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isAnalyzing ? AppColors.error : AppColors.success,
-                foregroundColor: AppColors.contentTextLight,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: Icon(_isAnalyzing ? Icons.stop : Icons.play_arrow, size: 20),
-              label: Text(
-                _isAnalyzing ? AppMessages.stopAnalysis : AppMessages.startAnalysis,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          const Icon(
+            Icons.camera_alt,
+            size: 80,
+            color: AppColors.contentTextLight,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Cámara no inicializada',
+            style: TextStyle(
+              color: AppColors.contentTextLight,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          
-          const SizedBox(height: 8),
-          
-          // Botón de pausar/reanudar captura
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _isAnalyzing ? _togglePauseCapture : null,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _isPaused ? AppColors.warning : AppColors.info,
-                side: BorderSide(
-                  color: _isPaused ? AppColors.warning : AppColors.info,
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: Icon(
-                _isPaused ? Icons.play_arrow : Icons.pause,
-                size: 18,
-              ),
-              label: Text(
-                _isPaused ? 'Reanudar Captura' : 'Pausar Captura',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          Text(
+            'Controller: ${_cameraBloc.cameraService.controller != null ? "Disponible" : "No disponible"}',
+            style: TextStyle(
+              color: AppColors.contentTextLight.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
+          ),
+          Text(
+            'Inicializado: ${_cameraBloc.cameraService.isInitialized ? "Sí" : "No"}',
+            style: TextStyle(
+              color: AppColors.contentTextLight.withValues(alpha: 0.7),
+              fontSize: 12,
             ),
           ),
         ],
@@ -704,40 +592,74 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildResultsPanel() {
-    return BlocBuilder<FrameAnalysisBloc, FrameAnalysisState>(
-      builder: (context, state) {
-        if (state is FrameAnalysisInitial) {
-          return _buildResultsPlaceholder(
-            '🎯 Inicia el análisis para ver resultados',
-            AppColors.info,
-          );
-        } else if (state is FrameAnalysisProcessing) {
-          return _buildResultsPlaceholder(
-            '⚡ Procesando frames...',
-            AppColors.warning,
-          );
-        } else if (state is FrameAnalysisSuccess) {
-          return _buildResultsContent(state.result);
-        } else if (state is FrameAnalysisError) {
-          return _buildResultsPlaceholder(
-            '❌ Error: ${state.message}',
-            AppColors.error,
-          );
-        } else {
-          return _buildResultsPlaceholder(
-            '⏳ Esperando resultados...',
-            AppColors.lightGrey,
-          );
-        }
-      },
+  Widget _buildAnalysisOverlay() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.success,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.fiber_manual_record,
+            color: AppColors.contentTextLight,
+            size: 12,
+          ),
+          SizedBox(width: 4),
+          Text(
+            AppMessages.analyzingStatus,
+            style: TextStyle(
+              color: AppColors.contentTextLight,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: BlocBuilder<FrameAnalysisBloc, FrameAnalysisState>(
+        builder: (context, state) {
+          if (state is FrameAnalysisInitial) {
+            return _buildResultsPlaceholder(
+              '🎯 Inicia el análisis para ver resultados',
+              AppColors.info,
+            );
+          } else if (state is FrameAnalysisProcessing) {
+            return _buildResultsPlaceholder(
+              '⚡ Procesando frames...',
+              AppColors.warning,
+            );
+          } else if (state is FrameAnalysisSuccess) {
+            return _buildResultsContent(state.result);
+          } else if (state is FrameAnalysisError) {
+            return _buildResultsPlaceholder(
+              '❌ Error: ${state.message}',
+              AppColors.error,
+            );
+          } else {
+            return _buildResultsPlaceholder(
+              '⏳ Esperando resultados...',
+              AppColors.lightGrey,
+            );
+          }
+        },
+      ),
     );
   }
 
   Widget _buildResultsPlaceholder(String message, Color color) {
     return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
@@ -758,17 +680,17 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.analytics,
-              size: 40,
+              size: 48,
               color: AppColors.contentTextLight,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             CustomText(
               text: message,
               style: const TextStyle(
                 color: AppColors.contentTextLight,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -780,8 +702,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   Widget _buildResultsContent(dynamic result) {
     return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
@@ -800,35 +721,35 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(
+               Icon(
                 Icons.check_circle,
                 color: AppColors.contentTextLight,
-                size: 20,
+                size: 24,
               ),
-              const SizedBox(width: 6),
+               SizedBox(width: 8),
               CustomText(
                 text: AppMessages.analysisResult,
-                style: const TextStyle(
-                  fontSize: 16,
+                style:  TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.contentTextLight,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildResultItem(
             '🐄 ${AppMessages.breed}',
             result['raza'] ?? AppMessages.notDetected,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _buildResultItem(
             '⚖️ ${AppMessages.estimatedWeight}',
             '${result['peso'] ?? AppMessages.notAvailable} ${AppMessages.kg}',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _buildResultItem(
             '📊 ${AppMessages.confidence}',
             '${result['confianza'] ?? '0'}${AppMessages.percent}',
@@ -872,6 +793,41 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _isAnalyzing ? _stopAnalysis : _startAnalysis,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isAnalyzing ? AppColors.error : AppColors.success,
+          foregroundColor: AppColors.contentTextLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        icon: Icon(_isAnalyzing ? Icons.stop : Icons.play_arrow, size: 24),
+        label: Text(
+          _isAnalyzing ? AppMessages.stopAnalysis : AppMessages.startAnalysis,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
