@@ -22,7 +22,36 @@ def check_dataset_configuration():
     current_dir = os.getcwd()
     print(f"📁 Directorio actual: {current_dir}")
     
-    # 2. Verificar archivos de configuración
+    # 2. Verificar nueva ubicación de datasets
+    datasets_dir = Path.home() / "Datasets" / "Bovino"
+    print(f"\n📂 Verificando datasets en: {datasets_dir}")
+    
+    if datasets_dir.exists():
+        print(f"   ✅ Directorio de datasets existe")
+        
+        # Listar datasets descargados
+        dataset_folders = [f for f in datasets_dir.iterdir() if f.is_dir()]
+        if dataset_folders:
+            print(f"   📊 Datasets encontrados: {len(dataset_folders)}")
+            for folder in dataset_folders:
+                # Contar imágenes en cada dataset
+                image_files = list(folder.rglob("*.jpg")) + list(folder.rglob("*.jpeg")) + list(folder.rglob("*.png"))
+                print(f"      📁 {folder.name}: {len(image_files)} imágenes")
+                
+                # Mostrar subcarpetas (razas) si existen
+                subfolders = [f for f in folder.iterdir() if f.is_dir()]
+                if subfolders:
+                    for subfolder in subfolders:
+                        sub_images = list(subfolder.rglob("*.jpg")) + list(subfolder.rglob("*.jpeg")) + list(subfolder.rglob("*.png"))
+                        print(f"         🐄 {subfolder.name}: {len(sub_images)} imágenes")
+        else:
+            print(f"   ⚠️ No hay datasets descargados aún")
+            print(f"   💡 Ejecuta: python smart_download.py")
+    else:
+        print(f"   ❌ Directorio de datasets no existe")
+        print(f"   💡 Ejecuta: python smart_download.py para crear el directorio")
+    
+    # 3. Verificar archivos de configuración del proyecto
     config_files = [
         "config/settings.py",
         "models/",
@@ -30,7 +59,7 @@ def check_dataset_configuration():
         "assets/data/breeds.json"
     ]
     
-    print("\n📋 Verificando archivos de configuración:")
+    print("\n📋 Verificando archivos de configuración del proyecto:")
     for file_path in config_files:
         if os.path.exists(file_path):
             if os.path.isdir(file_path):
@@ -46,7 +75,7 @@ def check_dataset_configuration():
         else:
             print(f"   ❌ {file_path} (no encontrado)")
     
-    # 3. Verificar dataset de razas
+    # 4. Verificar dataset de razas
     print("\n🐄 Verificando dataset de razas:")
     breeds_file = "assets/data/breeds.json"
     if os.path.exists(breeds_file):
@@ -61,7 +90,7 @@ def check_dataset_configuration():
     else:
         print(f"   ❌ Dataset no encontrado en: {breeds_file}")
     
-    # 4. Verificar modelos de TensorFlow
+    # 5. Verificar modelos de TensorFlow
     print("\n🤖 Verificando modelos de TensorFlow:")
     model_paths = [
         "models/bovino_model.h5",
@@ -77,7 +106,7 @@ def check_dataset_configuration():
         else:
             print(f"   ❌ {model_path} (no encontrado)")
     
-    # 5. Verificar configuración de settings
+    # 6. Verificar configuración de settings
     print("\n⚙️ Verificando configuración de settings:")
     try:
         from config.settings import Settings
@@ -102,21 +131,25 @@ def check_dataset_configuration():
     except Exception as e:
         print(f"   ❌ Error cargando settings: {e}")
     
-    # 6. Recomendaciones
+    # 7. Recomendaciones actualizadas
     print("\n💡 Recomendaciones:")
-    print("   1. Para usar tu dataset:")
-    print("      - Entrena tu modelo con TensorFlow/Keras")
-    print("      - Guarda el modelo como .h5 o .pb")
-    print("      - Configura MODEL_PATH en config/settings.py")
-    print("      - Actualiza BOVINE_BREEDS con tus razas")
-    print("      - Modifica TensorFlowService para cargar tu modelo")
+    print("   1. Para descargar datasets:")
+    print("      - Ejecuta: python smart_download.py")
+    print("      - Selecciona opción 1 (mini - 50MB) para empezar")
+    print("      - Los datasets se guardan en: C:\\Users\\Lenovo\\Datasets\\Bovino")
     
-    print("\n   2. Para verificar que funciona:")
+    print("\n   2. Para entrenar tu modelo:")
+    print("      - Usa los datasets descargados de la carpeta de usuario")
+    print("      - Entrena con TensorFlow/Keras usando las 5 razas disponibles")
+    print("      - Guarda el modelo como .h5 en models/")
+    print("      - Actualiza BOVINE_BREEDS en config/settings.py")
+    
+    print("\n   3. Para verificar que funciona:")
     print("      - Ejecuta: python main.py")
     print("      - Envía una imagen a /submit-frame")
     print("      - Revisa los logs para ver el análisis")
     
-    print("\n   3. Para debugging:")
+    print("\n   4. Para debugging:")
     print("      - Revisa los logs del servidor")
     print("      - Usa el endpoint /health para verificar estado")
     print("      - Usa el endpoint /stats para ver estadísticas")

@@ -14,5 +14,9 @@ psutil==5.9.6
 kagglehub==0.2.0
 kaggle==1.5.16
 
+# Dependencias para entrenamiento
+tensorflow-gpu==2.14.0
+keras==2.14.0
+
 # TensorFlow (comentar si hay problemas de compatibilidad)
 # tensorflow==2.15.0 

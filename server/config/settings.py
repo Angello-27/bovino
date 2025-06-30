@@ -40,42 +40,27 @@ class Settings:
 
     # Configuración de razas bovinas (datos estáticos del dominio)
     BOVINE_BREEDS = [
-        "Angus",
-        "Hereford", 
+        "Ayrshire",
+        "Brown Swiss",
         "Holstein",
         "Jersey",
-        "Brahman",
-        "Charolais",
-        "Limousin",
-        "Simmental",
-        "Shorthorn",
-        "Gelbvieh",
+        "Red Dane",
     ]
 
     # Características por raza (datos estáticos del dominio)
     BREED_CHARACTERISTICS = {
-        "Angus": ["Negro", "Sin cuernos", "Musculoso", "Adaptable"],
-        "Hereford": ["Rojo y blanco", "Cuernos cortos", "Rustico", "Buen temperamento"],
-        "Holstein": ["Blanco y negro", "Grande", "Lechera", "Alta producción"],
-        "Jersey": ["Marrón claro", "Pequeña", "Lechera", "Alta grasa"],
-        "Brahman": ["Gris", "Joroba", "Resistente al calor", "Cuernos largos"],
-        "Charolais": ["Blanco", "Grande", "Musculoso", "Cárnico"],
-        "Limousin": ["Dorado", "Musculoso", "Cárnico", "Eficiente"],
-        "Simmental": ["Rojo y blanco", "Grande", "Doble propósito", "Gentil"],
-        "Shorthorn": ["Rojo", "Mediano", "Doble propósito", "Histórico"],
-        "Gelbvieh": ["Dorado", "Mediano", "Cárnico", "Europeo"],
+        "Ayrshire": ['Rojo y blanco', 'Mediana', 'Lechera', 'Resistente'],
+        "Brown Swiss": ['Marrón', 'Grande', 'Lechera', 'Gentil'],
+        "Holstein": ['Blanco y negro', 'Grande', 'Lechera', 'Alta producción'],
+        "Jersey": ['Marrón claro', 'Pequeña', 'Lechera', 'Alta grasa'],
+        "Red Dane": ['Rojo', 'Grande', 'Lechera', 'Europeo'],
     }
 
     # Pesos promedio por raza (datos estáticos del dominio)
     BREED_AVERAGE_WEIGHTS = {
-        "Angus": 650.0,
-        "Hereford": 680.0,
+        "Ayrshire": 550.0,
+        "Brown Swiss": 650.0,
         "Holstein": 750.0,
         "Jersey": 450.0,
-        "Brahman": 700.0,
-        "Charolais": 800.0,
-        "Limousin": 750.0,
-        "Simmental": 800.0,
-        "Shorthorn": 650.0,
-        "Gelbvieh": 700.0,
+        "Red Dane": 700.0,
     }

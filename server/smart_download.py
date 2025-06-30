@@ -29,30 +29,15 @@ class SmartKaggleDownloader:
 
         # Datasets REALES y públicos encontrados en Kaggle
         self.alternative_datasets = {
-            "mini": {
+            "test": {
                 "id": "anandkumarsahu09/cattle-breeds-dataset",
                 "size": "~50MB",
-                "description": "200+ imágenes de 5 razas de bovinos diferentes",
+                "description": "1,200+ imágenes de 5 razas de bovinos (Ayrshire, Brown Swiss, Holstein, Jersey, Red Dane)",
             },
-            "small": {
-                "id": "afnanamin/cow-images",
-                "size": "~100MB",
-                "description": "Colección de imágenes de vacas",
-            },
-            "medium": {
-                "id": "crsuthikshnkumar/cow-breed-data-set",
-                "size": "~200MB",
-                "description": "Dataset de razas de vacas para clasificación",
-            },
-            "large": {
+            "production": {
                 "id": "sadhliroomyprime/cattle-weight-detection-model-dataset-12k",
-                "size": "~2GB",
-                "description": "Dataset completo de detección de peso bovino (versión reducida)",
-            },
-            "xlarge": {
-                "id": "sadhliroomyprime/cattle-weight-detection-model-dataset-12k",
-                "size": "~5GB",
-                "description": "Dataset extendido para entrenamiento avanzado",
+                "size": "~47GB",
+                "description": "Dataset completo de detección de peso bovino para producción",
             },
         }
 
@@ -105,25 +90,21 @@ class SmartKaggleDownloader:
 
         # Mostrar alternativas REALES
         print("\n🎯 OPCIONES DISPONIBLES:")
-        print("1️⃣ DATASET MINI (50MB) - 200+ imágenes de 5 razas")
-        print("2️⃣ DATASET PEQUEÑO (100MB) - Colección de imágenes de vacas")
-        print("3️⃣ DATASET MEDIANO (200MB) - Dataset de razas para clasificación")
-        print("4️⃣ DATASET GRANDE (2GB) - Dataset completo reducido para entrenamiento")
-        print("5️⃣ DATASET EXTRA GRANDE (5GB) - Dataset extendido para ML avanzado")
-        print("6️⃣ DATASET COMPLETO (47GB) - Dataset original completo")
-        print("7️⃣ CREAR MUESTRA LOCAL - Imágenes de ejemplo sin descargar")
-        print("8️⃣ CANCELAR - Salir sin descargar")
+        print("1️⃣ DATASET TEST (50MB) - 1,200+ imágenes de 5 razas")
+        print("2️⃣ DATASET PRODUCCIÓN (47GB) - Dataset completo de detección de peso bovino para producción")
+        print("3️⃣ CREAR MUESTRA LOCAL - Imágenes de ejemplo sin descargar")
+        print("4️⃣ CANCELAR - Salir sin descargar")
 
         return self.get_user_choice()
 
     def get_user_choice(self):
         """Obtener elección del usuario"""
         print("\n💡 ¿Qué opción prefieres?")
-        print("   Recomiendo empezar con la opción 4 (grande - 2GB) para entrenamiento")
+        print("   Recomiendo empezar con la opción 1 (test - 50MB) para desarrollo")
 
-        # Por defecto, elegir dataset grande para entrenamiento
-        choice = "1"  # Dataset grande (2GB)
-        logger.info(f"🔄 Selección automática: Opción {choice} (Dataset grande - 2GB)")
+        # Por defecto, elegir dataset de prueba para desarrollo
+        choice = "1"  # Dataset test (50MB)
+        logger.info(f"🔄 Selección automática: Opción {choice} (Dataset test - 50MB)")
         return choice
 
     def download_alternative_dataset(self, dataset_key):
@@ -177,8 +158,8 @@ class SmartKaggleDownloader:
             return None
 
     def download_full_dataset(self):
-        """Descargar dataset completo de 47GB"""
-        logger.info("⚠️ INICIANDO DESCARGA DEL DATASET COMPLETO (47GB)")
+        """Descargar dataset de producción de 47GB"""
+        logger.info("⚠️ INICIANDO DESCARGA DEL DATASET DE PRODUCCIÓN (47GB)")
         logger.info("⏱️ Esto puede tomar 2-6 horas...")
 
         try:
@@ -208,7 +189,7 @@ class SmartKaggleDownloader:
                 downloaded_files = list(self.data_dir.rglob("*"))
                 image_files = [f for f in downloaded_files if f.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp'}]
                 
-                logger.info(f"🎉 ¡DATASET COMPLETO DESCARGADO!")
+                logger.info(f"🎉 ¡DATASET DE PRODUCCIÓN DESCARGADO!")
                 logger.info(f"📁 Ubicación: {self.data_dir}")
                 logger.info(f"📊 Archivos totales: {len(downloaded_files)}")
                 logger.info(f"🖼️ Imágenes encontradas: {len(image_files)}")
@@ -219,7 +200,7 @@ class SmartKaggleDownloader:
                 raise e
 
         except Exception as e:
-            logger.error(f"❌ Error descargando dataset completo: {e}")
+            logger.error(f"❌ Error descargando dataset de producción: {e}")
             return None
 
     def create_sample_dataset_with_real_images(self):
@@ -329,30 +310,14 @@ class SmartKaggleDownloader:
         downloaded_path = None
 
         if choice == "1":
-            logger.info("\n🔄 Descargando dataset mini (50MB)...")
-            downloaded_path = self.download_alternative_dataset("mini")
+            logger.info("\n🔄 Descargando dataset test (50MB)...")
+            downloaded_path = self.download_alternative_dataset("test")
 
         elif choice == "2":
-            logger.info("\n🔄 Descargando dataset pequeño (100MB)...")
-            downloaded_path = self.download_alternative_dataset("small")
-
-        elif choice == "3":
-            logger.info("\n🔄 Descargando dataset mediano (200MB)...")
-            downloaded_path = self.download_alternative_dataset("medium")
-
-        elif choice == "4":
-            logger.info("\n🔄 Descargando dataset grande (2GB)...")
-            downloaded_path = self.download_alternative_dataset("large")
-
-        elif choice == "5":
-            logger.info("\n🔄 Descargando dataset extra grande (5GB)...")
-            downloaded_path = self.download_alternative_dataset("xlarge")
-
-        elif choice == "6":
-            logger.info("\n🔄 Iniciando descarga del dataset completo (47GB)...")
+            logger.info("\n🔄 Iniciando descarga del dataset producción (47GB)...")
             downloaded_path = self.download_full_dataset()
 
-        elif choice == "7":
+        elif choice == "3":
             logger.info("\n🔄 Creando dataset de muestra local...")
             downloaded_path = self.create_sample_dataset_with_real_images()
 
@@ -390,7 +355,7 @@ class SmartKaggleDownloader:
             logger.info("💡 Alternativas:")
             logger.info("   1. Verifica tu conexión a internet")
             logger.info("   2. Configura credenciales de Kaggle")
-            logger.info("   3. Prueba con dataset de muestra local (opción 7)")
+            logger.info("   3. Prueba con dataset de muestra local (opción 3)")
             return False
 
 
