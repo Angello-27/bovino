@@ -114,7 +114,8 @@ class CameraService {
       
       // Verificar que el stream esté disponible
       if (_frameCapturedController.isClosed) {
-        throw Exception('Stream de frames no disponible');
+        _logger.w('⚠️ Stream de frames cerrado, no se puede iniciar captura');
+        return;
       }
       
       _logger.i('🎬 Iniciando captura automática de frames...');
@@ -294,13 +295,29 @@ class CameraService {
   Future<void> dispose() async {
     _logger.i('🧹 Liberando recursos de cámara...');
     
+    // Detener captura primero
     stopFrameCapture();
     
+    // Liberar controlador de cámara
     await _controller?.dispose();
     _controller = null;
     
-    await _frameCapturedController.close();
-    await _cameraStateController.close();
+    // Solo cerrar streams si no están ya cerrados
+    try {
+      if (!_frameCapturedController.isClosed) {
+        await _frameCapturedController.close();
+      }
+    } catch (e) {
+      _logger.w('⚠️ Error al cerrar frameCapturedController: $e');
+    }
+    
+    try {
+      if (!_cameraStateController.isClosed) {
+        await _cameraStateController.close();
+      }
+    } catch (e) {
+      _logger.w('⚠️ Error al cerrar cameraStateController: $e');
+    }
     
     _logger.i('✅ Recursos de cámara liberados');
   }

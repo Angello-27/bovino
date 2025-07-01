@@ -48,14 +48,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     _initializeServices();
     _initializeBlocs();
     
-    // Configurar listener del CameraBloc
-    _cameraBloc.stream.listen((state) {
-      _logger.d('📷 Estado de CameraBloc cambiado: $state');
-    });
-    
-    _requestPermissions();
-    
-    // Escuchar cambios en el estado de la cámara
+    // Configurar UN SOLO listener del CameraBloc para evitar duplicados
     _cameraBloc.stream.listen((state) {
       _logger.i('📷 Estado de cámara cambiado: $state');
       if (state is CameraReady) {
@@ -64,6 +57,8 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         _logger.e('❌ Error en cámara: ${state.failure.message}');
       }
     });
+    
+    _requestPermissions();
   }
 
   @override
@@ -76,15 +71,15 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
         _stopAnalysis();
       }
       
-      // Liberar recursos de cámara
+      // Liberar recursos de cámara (pero NO cerrar el BLoC)
       _cameraBloc.add(DisposeCamera());
       
       // Remover observer
       WidgetsBinding.instance.removeObserver(this);
       
-      // Cerrar BLoCs
-      _cameraBloc.close();
-      _frameAnalysisBloc.close();
+      // NO cerrar los BLoCs aquí - pueden ser reutilizados
+      // Los BLoCs se cierran automáticamente cuando la app se cierra
+      // o cuando se destruye el widget padre
       
       _logger.i('✅ Recursos de CameraPage liberados correctamente');
     } catch (e) {

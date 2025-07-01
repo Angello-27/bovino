@@ -35,16 +35,18 @@
 
 El sistema implementa un algoritmo inteligente para mostrar solo los mejores resultados:
 
-#### **Reglas de Precisión**
-1. **Primer Resultado**: Mínimo 70% de precisión para ser mostrado
-2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
-3. **Reemplazo**: Solo cambiar si la nueva precisión es mayor (sin importar raza)
+#### **Reglas de Precisión Simplificadas**
+1. **NUNCA mostrar resultados** con precisión < 70%
+2. **Primer Resultado**: Mínimo 70% de precisión para ser mostrado
+3. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
+4. **Otros casos**: Solo cambiar si la nueva precisión es mayor
 
 #### **Comportamiento de la UI**
 - ✅ **Mantiene el último resultado exitoso** visible
 - ✅ **No muestra "procesando frames"** después del primer resultado
-- ✅ **Solo actualiza** si hay mejor precisión o cambio de raza válido
+- ✅ **Solo actualiza** si hay mejor precisión
 - ✅ **Limpia el estado** solo cuando se sale al home
+- ✅ **Evita resultados de baja calidad** (< 70%)
 
 ## 🏛️ Principios Arquitectónicos
 

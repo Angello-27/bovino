@@ -381,20 +381,28 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   }
 
   /// Verificar si debemos mostrar este resultado con restricciones de precisión
+  /// 
+  /// REGLAS DE PRECISIÓN SIMPLIFICADAS:
+  /// 1. NUNCA mostrar resultados con precisión < 70%
+  /// 2. Primer resultado: mínimo 70% de precisión
+  /// 3. Resultado actual ≥ 95%: NO cambiar (resultado final)
+  /// 4. Otros casos: Solo cambiar si la nueva precisión es mayor
   void _shouldShowResult(Map<String, dynamic> newResult) {
     // Obtener el resultado actual si existe
     final currentResult = _results.values.isNotEmpty ? _results.values.first : null;
     
     final newConfidence = double.tryParse(newResult['confianza'] ?? '0') ?? 0.0;
     
+    // Verificación principal: nunca mostrar resultados con precisión < 70%
+    if (newConfidence < 0.7) {
+      _logger.w('⚠️ Resultado rechazado - precisión muy baja: ${newResult['raza']} (${newResult['confianza']}) < 0.7');
+      return;
+    }
+    
     if (currentResult == null) {
-      // Primer resultado - verificar que tenga al menos 70% de precisión
-      if (newConfidence >= 0.7) {
-        _logger.i('🎯 Primer resultado válido (≥70%) - mostrando: ${newResult['raza']} (${newResult['confianza']})');
-        add(_EmitResultEvent(newResult));
-      } else {
-        _logger.w('⚠️ Primer resultado rechazado - precisión muy baja: ${newResult['raza']} (${newResult['confianza']}) < 0.7');
-      }
+      // Primer resultado - ya verificamos que tenga ≥70% de precisión
+      _logger.i('🎯 Primer resultado válido (≥70%) - mostrando: ${newResult['raza']} (${newResult['confianza']})');
+      add(_EmitResultEvent(newResult));
       return;
     }
     
@@ -406,8 +414,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
       return;
     }
     
-    // Lógica simplificada: solo reemplazar si la nueva precisión es mayor
-    // (sin importar la raza, ya que tenemos una base ≥70%)
+    // Lógica simple: solo reemplazar si la nueva precisión es mayor
     if (newConfidence > currentConfidence) {
       _logger.i('🔄 Reemplazando resultado: ${currentResult['raza']} (${currentResult['confianza']}) → ${newResult['raza']} (${newResult['confianza']}) - Mejor precisión');
       add(_EmitResultEvent(newResult));

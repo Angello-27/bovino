@@ -130,8 +130,13 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       // Configurar la suscripción al stream de frames
       _setupFrameStreamSubscription();
       
-      emit(CameraReady());
-      _logger.i('Cámara inicializada correctamente');
+      // Verificar una vez más antes de emitir el estado final
+      if (!isClosed) {
+        emit(CameraReady());
+        _logger.i('Cámara inicializada correctamente');
+      } else {
+        _logger.w('⚠️ CameraBloc cerrado antes de emitir CameraReady');
+      }
     } catch (e) {
       _logger.e('Error al inicializar cámara: $e');
       if (!isClosed) {
@@ -142,6 +147,12 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 
   /// Configurar la suscripción al stream de frames
   void _setupFrameStreamSubscription() {
+    // Verificar que el BLoC no esté cerrado
+    if (isClosed) {
+      _logger.w('⚠️ CameraBloc cerrado - no se puede configurar stream');
+      return;
+    }
+    
     // Cancelar suscripción anterior si existe
     _frameSubscription?.cancel();
     
@@ -157,9 +168,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
         }
         
         // Enviar frame al FrameAnalysisBloc SOLO si el análisis está activado
-        if (_analysisEnabled) {
+        if (_analysisEnabled && _frameAnalysisBloc != null) {
           _logger.i('📤 Enviando frame para análisis: $framePath');
-          _frameAnalysisBloc?.add(ProcessFrameEvent(framePath: framePath));
+          _frameAnalysisBloc!.add(ProcessFrameEvent(framePath: framePath));
         }
       },
       onError: (error) {
@@ -188,8 +199,20 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
         _setupFrameStreamSubscription();
       }
 
+      // Verificar que el stream se configuró correctamente
+      if (_frameSubscription == null) {
+        _logger.w('⚠️ No se pudo configurar el stream de frames');
+        if (!isClosed) {
+          emit(const CameraError(UnknownFailure(message: 'Stream de frames no disponible')));
+        }
+        return;
+      }
+
       cameraService.startFrameCapture();
-      emit(const CameraCapturing('')); // Estado inicial de captura
+      
+      if (!isClosed) {
+        emit(const CameraCapturing('')); // Estado inicial de captura
+      }
 
       _logger.i('Captura de frames iniciada');
     } catch (e) {
@@ -258,23 +281,46 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     try {
       _logger.i('Liberando recursos de cámara...');
 
-      // Cancelar suscripción al stream
-      await _frameSubscription?.cancel();
-      _frameSubscription = null;
+      // Cancelar suscripción al stream de manera segura
+      try {
+        await _frameSubscription?.cancel();
+        _frameSubscription = null;
+      } catch (e) {
+        _logger.w('⚠️ Error al cancelar suscripción de frames: $e');
+      }
 
-      await cameraService.dispose();
-      emit(CameraInitial());
+      // Liberar recursos del servicio de cámara
+      try {
+        await cameraService.dispose();
+      } catch (e) {
+        _logger.w('⚠️ Error al liberar recursos del servicio: $e');
+      }
+      
+      if (!isClosed) {
+        emit(CameraInitial());
+      }
 
       _logger.i('Recursos de cámara liberados');
     } catch (e) {
       _logger.e('Error al liberar recursos: $e');
-      emit(CameraError(UnknownFailure(message: e.toString())));
+      if (!isClosed) {
+        emit(CameraError(UnknownFailure(message: e.toString())));
+      }
     }
   }
 
   @override
   Future<void> close() {
-    _frameSubscription?.cancel();
+    _logger.i('🔒 Cerrando CameraBloc...');
+    
+    // Cancelar suscripción de manera segura
+    try {
+      _frameSubscription?.cancel();
+      _frameSubscription = null;
+    } catch (e) {
+      _logger.w('⚠️ Error al cancelar suscripción en close: $e');
+    }
+    
     return super.close();
   }
 }
