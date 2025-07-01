@@ -58,18 +58,26 @@ class TensorFlowDataSourceImpl(TensorFlowDataSource):
         try:
             logger.info("🤖 Inicializando modelo de TensorFlow...")
 
-            # En un entorno real, cargarías un modelo pre-entrenado
-            # Por ahora, creamos un modelo simple para demostración
-            self.model = self._create_demo_model()
-
+            # Cargar modelo entrenado real
+            model_path = self.settings.MODEL_PATH
+            labels_path = self.settings.LABELS_PATH
+            
+            logger.info(f"📥 Cargando modelo desde: {model_path}")
+            logger.info(f"📋 Cargando etiquetas desde: {labels_path}")
+            
+            # Cargar modelo entrenado
+            self.model = tf.keras.models.load_model(model_path)
+            
             # Cargar etiquetas de clases
-            self.class_labels = self.settings.BOVINE_BREEDS
+            with open(labels_path, 'r', encoding='utf-8') as f:
+                self.class_labels = json.load(f)
+            
+            # Convertir a lista de nombres de razas
+            self.breed_names = list(self.class_labels.keys())
 
             self.model_ready = True
-            logger.info(f"✅ Modelo inicializado con {len(self.class_labels)} clases")
-
-            # Simular carga del modelo (en producción cargarías el modelo real)
-            await asyncio.sleep(2)
+            logger.info(f"✅ Modelo cargado con {len(self.breed_names)} clases")
+            logger.info(f"🐄 Razas: {self.breed_names}")
             
             self.is_initialized = True
             logger.info("✅ Modelo TensorFlow inicializado correctamente")
@@ -78,36 +86,7 @@ class TensorFlowDataSourceImpl(TensorFlowDataSource):
             logger.error(f"❌ Error al inicializar modelo: {e}")
             raise
 
-    def _create_demo_model(self):
-        """Crear un modelo de demostración simple"""
-        # Modelo básico de CNN para clasificación
-        model = tf.keras.Sequential(
-            [
-                tf.keras.layers.Conv2D(
-                    32,
-                    3,
-                    activation="relu",
-                    input_shape=(self.settings.IMAGE_SIZE, self.settings.IMAGE_SIZE, 3),
-                ),
-                tf.keras.layers.MaxPooling2D(),
-                tf.keras.layers.Conv2D(64, 3, activation="relu"),
-                tf.keras.layers.MaxPooling2D(),
-                tf.keras.layers.Conv2D(64, 3, activation="relu"),
-                tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(64, activation="relu"),
-                tf.keras.layers.Dense(
-                    len(self.settings.BOVINE_BREEDS), activation="softmax"
-                ),
-            ]
-        )
 
-        model.compile(
-            optimizer="adam",
-            loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
-        )
-
-        return model
 
     def is_model_ready(self) -> bool:
         """Verificar si el modelo está listo"""
@@ -128,7 +107,7 @@ class TensorFlowDataSourceImpl(TensorFlowDataSource):
             # Obtener raza y confianza
             breed_index = np.argmax(prediction)
             confidence = float(prediction[breed_index])
-            breed = self.class_labels[breed_index]
+            breed = self.breed_names[breed_index]
 
             # Obtener características de la raza
             characteristics = self.settings.BREED_CHARACTERISTICS.get(breed, [])
@@ -188,29 +167,18 @@ class TensorFlowDataSourceImpl(TensorFlowDataSource):
     async def _predict_breed(self, image: np.ndarray) -> np.ndarray:
         """Realizar predicción de raza"""
         try:
-            # En un entorno real, usarías el modelo entrenado
-            # Por ahora, simulamos una predicción
-            prediction = self._simulate_prediction()
-            return prediction
+            if self.model is None:
+                raise Exception("Modelo no cargado")
+                
+            # Usar modelo real para predicción
+            prediction = self.model.predict(image, verbose="silent")
+            return prediction[0]  # Retornar primera predicción
 
         except Exception as e:
             logger.error(f"Error en predicción: {e}")
             raise
 
-    def _simulate_prediction(self) -> np.ndarray:
-        """Simular predicción para demostración"""
-        # Crear predicción aleatoria pero realista
-        num_classes = len(self.class_labels)
-        prediction = np.random.dirichlet(np.ones(num_classes) * 0.1)
 
-        # Hacer que una clase sea dominante
-        dominant_class = random.randint(0, num_classes - 1)
-        prediction[dominant_class] = random.uniform(0.6, 0.95)
-
-        # Normalizar
-        prediction = prediction / np.sum(prediction)
-
-        return prediction
 
     def _estimate_weight(
         self, breed: str, confidence: float, image: np.ndarray

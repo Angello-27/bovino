@@ -1,5 +1,6 @@
 class AppConstants {
   // Configuración del servidor TensorFlow
+  // Para dispositivo físico en la misma red local
   static const String serverBaseUrl = 'http://192.168.0.6:8000';
   static const String apiBaseUrl = 'http://192.168.0.6:8000';
 

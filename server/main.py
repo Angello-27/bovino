@@ -56,8 +56,8 @@ app.add_middleware(
 
 # Inicializar Clean Architecture
 datasource = TensorFlowDataSourceImpl()
-# repository = BovinoRepositoryImpl(datasource)  # Comentado por problemas de implementación
-# analizar_bovino_usecase = AnalizarBovinoUseCase(repository)  # Comentado por problemas de implementación
+repository = BovinoRepositoryImpl(datasource)
+analizar_bovino_usecase = AnalizarBovinoUseCase(repository)
 
 # Cola de análisis (en memoria - en producción usar Redis/Celery)
 analysis_queue: Dict[str, dict] = {}
@@ -93,7 +93,7 @@ async def startup_event():
     
     try:
         # Inicializar Clean Architecture
-        await datasource.initialize_model()
+        await repository.initialize()
         logger.info("✅ Clean Architecture inicializada correctamente")
         logger.info("✅ Servidor Bovino IA iniciado correctamente")
         logger.info(f"📡 Servidor corriendo en: http://{settings.HOST}:{settings.PORT}")
@@ -244,9 +244,14 @@ async def process_frame_with_clean_architecture(frame_id: str):
         image_content = analysis_queue[frame_id]["image_content"]
         logger.info(f"📊 Imagen obtenida de cola: {len(image_content)} bytes")
         
-        # Usar Clean Architecture: DataSource directamente
+        # Usar Clean Architecture: UseCase
         logger.info(f"🎯 Ejecutando análisis con Clean Architecture...")
-        bovino_entity = await datasource.analyze_bovino(image_content)
+        analysis_entity = await analizar_bovino_usecase.execute(frame_id, image_content)
+        bovino_entity = analysis_entity.result
+        
+        if bovino_entity is None:
+            raise Exception("No se pudo obtener resultado del análisis")
+            
         logger.info(f"✅ Análisis completado usando Clean Architecture para frame {frame_id}")
         
         # Convertir entidad a modelo de API

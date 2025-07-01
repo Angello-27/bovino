@@ -2,7 +2,7 @@ name: bovino
 description: "Aplicación para reconocimiento de ganado bovino usando cámara en vivo y TensorFlow"
 publish_to: 'none'
 
-version: 1.0.8
+version: 1.0.9
 
 environment:
   sdk: '>=3.7.0 <4.0.0'
@@ -19,7 +19,7 @@ dependencies:
   
   # HTTP requests para APIs
   dio: ^5.4.0
-  
+
   # Manejo de imágenes
   path_provider: ^2.1.2
   
