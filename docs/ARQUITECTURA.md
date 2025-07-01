@@ -16,7 +16,7 @@
 2. **Envío Asíncrono**: Frame se envía al servidor Python via `POST /submit-frame`
 3. **Procesamiento**: Servidor procesa la imagen con TensorFlow en background
 4. **Consulta de Estado**: App consulta estado via `GET /check-status/{frame_id}` cada 2 segundos
-5. **Resultado**: Cuando el análisis está completo, se muestra en pantalla
+5. **Resultado**: Cuando el análisis está completo, se evalúa con restricciones de precisión
 6. **Limpieza**: Ambos lados eliminan los datos del frame procesado
 
 ### Estados del Frame
@@ -30,6 +30,24 @@
 - **Consulta**: `GET /check-status/{frame_id}` cada 2 segundos
 - **Health Check**: `GET /health` para verificación de conexión
 - **Estadísticas**: `GET /stats` para métricas del servidor
+
+### 🎯 Sistema de Restricciones de Precisión
+
+El sistema implementa un algoritmo inteligente para mostrar solo los mejores resultados:
+
+#### **Reglas de Precisión**
+1. **Primer Resultado**: Mínimo 0.6% de precisión para ser mostrado
+2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
+3. **Misma Raza**: Solo cambiar si la nueva precisión es mayor
+4. **Diferente Raza**: 
+   - Si precisión actual ≤ 0.5%: Cambiar si la nueva es mayor
+   - Si precisión actual > 0.5%: Solo cambiar si la nueva ≥ 0.6%
+
+#### **Comportamiento de la UI**
+- ✅ **Mantiene el último resultado exitoso** visible
+- ✅ **No muestra "procesando frames"** después del primer resultado
+- ✅ **Solo actualiza** si hay mejor precisión o cambio de raza válido
+- ✅ **Limpia el estado** solo cuando se sale al home
 
 ## 🏛️ Principios Arquitectónicos
 
@@ -111,6 +129,7 @@ lib/
     ├── blocs/              # Gestión de estado mejorada
     │   ├── camera_bloc.dart        # BLoC para cámara con lógica real
     │   ├── bovino_bloc.dart        # BLoC para análisis bovino con Either
+    │   ├── frame_analysis_bloc.dart # BLoC para análisis de frames con restricciones
     │   ├── theme_bloc.dart         # BLoC para temas dinámicos
     │   └── splash_bloc.dart        # BLoC para splash screen
     ├── pages/              # Páginas principales
@@ -162,9 +181,14 @@ Cámara → CameraService → CameraBloc → UI
 Frame → TensorFlowServerDataSourceImpl → BovinoRepository → BovinoBloc → UI
 ```
 
-### 4. **Consulta de Estado Asíncrona**
+### 4. **Análisis de Frames con Restricciones**
 ```
-Servidor → HTTP Polling → BovinoBloc → UI
+Frame → BovinoBloc → FrameAnalysisBloc → Evaluación de Precisión → UI
+```
+
+### 5. **Consulta de Estado Asíncrona**
+```
+Servidor → HTTP Polling → BovinoBloc → FrameAnalysisBloc → UI
 ```
 
 ## 🤖 Modelo de Aprendizaje (Servidor Python)
@@ -471,6 +495,28 @@ _getIt.registerFactory<SplashBloc>(
 
 ## 🔄 Mejoras Recientes
 
+### Sistema de Restricciones de Precisión
+- ✅ **Algoritmo inteligente** para mostrar solo mejores resultados
+- ✅ **Primer resultado** con mínimo 0.6% de precisión
+- ✅ **Resultado final** cuando precisión ≥ 0.95%
+- ✅ **Misma raza** solo cambia si mejor precisión
+- ✅ **Diferente raza** con restricciones de precisión
+- ✅ **Logs detallados** con razones de cambio/rechazo
+
+### FrameAnalysisBloc
+- ✅ **Gestión de estado** para análisis de frames
+- ✅ **Evaluación de precisión** con restricciones
+- ✅ **Mantenimiento de resultados** en memoria
+- ✅ **Limpieza automática** al salir al home
+- ✅ **Verificación de estado** del BLoC antes de eventos
+
+### Comportamiento de UI Mejorado
+- ✅ **Mantiene resultado visible** después del primer éxito
+- ✅ **No muestra "procesando frames"** después del primer resultado
+- ✅ **Solo actualiza** si hay mejor precisión o cambio válido
+- ✅ **Limpia estado** solo cuando se sale al home
+- ✅ **Variable de estado local** para último resultado exitoso
+
 ### Flujo Asíncrono
 - ✅ **Análisis asíncrono** con cola en memoria
 - ✅ **HTTP polling** cada 2 segundos
@@ -497,6 +543,7 @@ _getIt.registerFactory<SplashBloc>(
 - ✅ **Manejo de errores** con Failure objects
 - ✅ **Either/Left/Right** para programación funcional
 - ✅ **Métodos privados** para cada evento
+- ✅ **Verificación de estado** antes de emitir eventos
 
 ### Peso Estimado
 - ✅ **Campo agregado** a BovinoEntity y BovinoModel

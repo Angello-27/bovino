@@ -380,15 +380,20 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     }
   }
 
-  /// Verificar si debemos mostrar este resultado (mejor precisión o diferente raza)
+  /// Verificar si debemos mostrar este resultado con restricciones de precisión
   void _shouldShowResult(Map<String, dynamic> newResult) {
     // Obtener el resultado actual si existe
     final currentResult = _results.values.isNotEmpty ? _results.values.first : null;
     
     if (currentResult == null) {
-      // Primer resultado - mostrarlo
-      _logger.i('🎯 Primer resultado - mostrando: ${newResult['raza']}');
-      add(_EmitResultEvent(newResult));
+      // Primer resultado - verificar que tenga al menos 0.6% de precisión
+      final newConfidence = double.tryParse(newResult['confianza'] ?? '0') ?? 0.0;
+      if (newConfidence >= 0.6) {
+        _logger.i('🎯 Primer resultado válido - mostrando: ${newResult['raza']} (${newResult['confianza']})');
+        add(_EmitResultEvent(newResult));
+      } else {
+        _logger.w('⚠️ Primer resultado rechazado - precisión muy baja: ${newResult['raza']} (${newResult['confianza']}) < 0.6');
+      }
       return;
     }
     
@@ -397,14 +402,51 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     final currentBreed = currentResult['raza'] ?? '';
     final newBreed = newResult['raza'] ?? '';
     
-    // Mostrar si:
-    // 1. Mejor precisión (más de 5% mejor)
-    // 2. Diferente raza
-    if (newConfidence > currentConfidence + 0.05 || newBreed != currentBreed) {
-      _logger.i('🔄 Reemplazando resultado: ${currentResult['raza']} (${currentResult['confianza']}) → ${newResult['raza']} (${newResult['confianza']})');
+    // Si la precisión actual es muy alta (≥0.95), no cambiar
+    if (currentConfidence >= 0.95) {
+      _logger.d('🏆 Resultado final alcanzado - manteniendo: ${currentResult['raza']} (${currentResult['confianza']})');
+      return;
+    }
+    
+    // Verificar si es la misma raza
+    final isSameBreed = newBreed == currentBreed;
+    
+    // Lógica de reemplazo:
+    // 1. Si es la misma raza: solo cambiar si la nueva precisión es mayor
+    // 2. Si es diferente raza: cambiar solo si la nueva precisión es ≥0.6
+    // 3. Si la precisión actual es ≤0.5: cambiar si la nueva es mayor (sin importar raza)
+    
+    bool shouldReplace = false;
+    String reason = '';
+    
+    if (isSameBreed) {
+      // Misma raza: solo cambiar si la nueva precisión es mayor
+      if (newConfidence > currentConfidence) {
+        shouldReplace = true;
+        reason = 'misma raza con mejor precisión';
+      }
+    } else {
+      // Diferente raza: verificar restricciones
+      if (currentConfidence <= 0.5) {
+        // Si la precisión actual es baja (≤0.5), cambiar si la nueva es mayor
+        if (newConfidence > currentConfidence) {
+          shouldReplace = true;
+          reason = 'diferente raza con mejor precisión (precisión actual baja)';
+        }
+      } else {
+        // Si la precisión actual es >0.5, la nueva debe ser ≥0.6 para cambiar
+        if (newConfidence >= 0.6) {
+          shouldReplace = true;
+          reason = 'diferente raza con precisión ≥0.6';
+        }
+      }
+    }
+    
+    if (shouldReplace) {
+      _logger.i('🔄 Reemplazando resultado: ${currentResult['raza']} (${currentResult['confianza']}) → ${newResult['raza']} (${newResult['confianza']}) - Razón: $reason');
       add(_EmitResultEvent(newResult));
     } else {
-      _logger.d('⏭️ Manteniendo resultado actual: ${currentResult['raza']} (${currentResult['confianza']}) > ${newResult['raza']} (${newResult['confianza']})');
+      _logger.d('⏭️ Manteniendo resultado actual: ${currentResult['raza']} (${currentResult['confianza']}) - Nueva: ${newResult['raza']} (${newResult['confianza']}) - No cumple criterios');
     }
   }
 

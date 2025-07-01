@@ -12,6 +12,7 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 - 🤖 **Análisis remoto** usando TensorFlow en servidor Python
 - 🐄 **Identificación automática** de razas bovinas
 - ⚖️ **Estimación de peso** del animal según la raza
+- 🎯 **Sistema de restricciones de precisión** para mostrar solo mejores resultados
 - 🔄 **Flujo asíncrono** con HTTP polling para consulta de estado
 - 🎨 **Interfaz moderna** con Material Design 3
 - 🌙 **Temas claro y oscuro** con cambio dinámico
@@ -34,8 +35,21 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 2. **Envío Asíncrono**: Frame se envía al servidor Python via `POST /submit-frame`
 3. **Procesamiento**: Servidor procesa la imagen con TensorFlow en background
 4. **Consulta de Estado**: App consulta estado via `GET /check-status/{frame_id}` cada 2 segundos
-5. **Resultado**: Cuando el análisis está completo, se muestra en pantalla
-6. **Limpieza**: Ambos lados eliminan los datos del frame procesado
+5. **Evaluación de Precisión**: Se evalúa el resultado con restricciones de precisión
+6. **Resultado**: Solo se muestra si cumple los criterios de calidad
+7. **Limpieza**: Ambos lados eliminan los datos del frame procesado
+
+### 🎯 Sistema de Restricciones de Precisión
+
+El sistema implementa un algoritmo inteligente para mostrar solo los mejores resultados:
+
+#### **Reglas de Precisión**
+1. **Primer Resultado**: Mínimo 0.6% de precisión para ser mostrado
+2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
+3. **Misma Raza**: Solo cambiar si la nueva precisión es mayor
+4. **Diferente Raza**: 
+   - Si precisión actual ≤ 0.5%: Cambiar si la nueva es mayor
+   - Si precisión actual > 0.5%: Solo cambiar si la nueva ≥ 0.6%
 
 ### Estados del Frame
 - **pending**: Frame recibido, esperando procesamiento
@@ -75,6 +89,7 @@ lib/
     ├── blocs/              # Gestión de estado mejorada
     │   ├── camera_bloc.dart        # BLoC para cámara con lógica real
     │   ├── bovino_bloc.dart        # BLoC para análisis con Either
+    │   ├── frame_analysis_bloc.dart # BLoC para análisis de frames con restricciones
     │   ├── theme_bloc.dart         # BLoC para temas dinámicos
     │   └── splash_bloc.dart        # BLoC para splash screen
     ├── pages/              # Páginas de la aplicación
@@ -138,6 +153,21 @@ Los widgets están organizados siguiendo **Atomic Design** de manera completa:
 3. **Verificación:** "Verificando conexión al servidor..."
 4. **Listo:** "Servidor conectado" o "Servidor no disponible"
 5. **Navegación:** Transición automática a HomePage
+
+## 🎨 Comportamiento de UI Mejorado
+
+### **Gestión Inteligente de Resultados**
+- ✅ **Mantiene el último resultado exitoso** visible en pantalla
+- ✅ **No muestra "procesando frames"** después del primer resultado exitoso
+- ✅ **Solo actualiza** si hay mejor precisión o cambio de raza válido
+- ✅ **Limpia el estado** solo cuando se sale al home
+- ✅ **Variable de estado local** para mantener el último resultado exitoso
+
+### **Experiencia de Usuario Optimizada**
+- 🎯 **Resultados de calidad**: Solo se muestran resultados con precisión ≥ 0.6%
+- 🔄 **Actualizaciones inteligentes**: Cambios solo cuando hay mejora real
+- 📱 **Persistencia de estado**: Resultados se mantienen aunque se detenga el análisis
+- 🧹 **Limpieza automática**: Estado se resetea al salir al home
 
 ## 🎯 Principios Aplicados
 

@@ -344,6 +344,23 @@ docker run -p 8000:8000 bovino-server
 }
 ```
 
+### Sistema de Restricciones de Precisión (Cliente)
+El cliente Flutter implementa un algoritmo inteligente para mostrar solo los mejores resultados:
+
+#### **Reglas de Precisión**
+1. **Primer Resultado**: Mínimo 0.6% de precisión para ser mostrado
+2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
+3. **Misma Raza**: Solo cambiar si la nueva precisión es mayor
+4. **Diferente Raza**: 
+   - Si precisión actual ≤ 0.5%: Cambiar si la nueva es mayor
+   - Si precisión actual > 0.5%: Solo cambiar si la nueva ≥ 0.6%
+
+#### **Comportamiento de la UI**
+- ✅ **Mantiene el último resultado exitoso** visible
+- ✅ **No muestra "procesando frames"** después del primer resultado
+- ✅ **Solo actualiza** si hay mejor precisión o cambio de raza válido
+- ✅ **Limpia el estado** solo cuando se sale al home
+
 ### Manejo de Errores
 - **404**: Frame no encontrado
 - **400**: Tipo de archivo no válido
@@ -356,6 +373,21 @@ docker run -p 8000:8000 bovino-server
 - [Reglas de Desarrollo](../docs/REGLAS_DESARROLLO.md) - Convenciones del proyecto
 
 ## 🔄 Mejoras Recientes
+
+### Sistema de Restricciones de Precisión (Cliente)
+- ✅ **Algoritmo inteligente** para mostrar solo mejores resultados
+- ✅ **Primer resultado** con mínimo 0.6% de precisión
+- ✅ **Resultado final** cuando precisión ≥ 0.95%
+- ✅ **Misma raza** solo cambia si mejor precisión
+- ✅ **Diferente raza** con restricciones de precisión
+- ✅ **Logs detallados** con razones de cambio/rechazo
+
+### Comportamiento de UI Mejorado (Cliente)
+- ✅ **Mantiene resultado visible** después del primer éxito
+- ✅ **No muestra "procesando frames"** después del primer resultado
+- ✅ **Solo actualiza** si hay mejor precisión o cambio válido
+- ✅ **Limpia estado** solo cuando se sale al home
+- ✅ **Variable de estado local** para último resultado exitoso
 
 ### Flujo Asíncrono
 - ✅ **Análisis asíncrono** con cola en memoria
