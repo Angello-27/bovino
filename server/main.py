@@ -30,7 +30,7 @@ configure_tensorflow_warnings()
 from domain.usecases import AnalizarBovinoUseCase
 from data.repositories import BovinoRepositoryImpl
 from data.datasources import TensorFlowDataSourceImpl
-from models.api_models import BovinoModel, BovinoAnalysisRequest, BovinoAnalysisResponse, AnalysisStatus, BovinoDetectionResult
+from models.api_models import BovinoModel, BovinoAnalysisRequest, AnalysisStatus, BovinoDetectionResult
 from config.settings import Settings
 
 # Configuración de logging
@@ -71,7 +71,7 @@ class FrameAnalysisResponse(BaseModel):
     """Respuesta de análisis de frame"""
     frame_id: str
     status: str  # "pending", "processing", "completed", "failed"
-    result: Optional[BovinoAnalysisResponse] = None
+    result: Optional[BovinoModel] = None  # BovinoModel directamente cuando completado
     error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -214,10 +214,25 @@ async def check_frame_status(frame_id: str):
         # Limpiar frames antiguos (más de 1 hora)
         cleanup_old_frames()
         
+        # Obtener resultado del análisis
+        result = frame_data["result"]
+        
+        if result is None:
+            # Frame aún procesándose
+            return FrameAnalysisResponse(
+                frame_id=frame_id,
+                status=frame_data["status"],
+                result=None,
+                error=frame_data["error"],
+                created_at=frame_data["created_at"],
+                updated_at=frame_data["updated_at"]
+            )
+        
+        # Frame completado - devolver directamente el BovinoModel
         return FrameAnalysisResponse(
             frame_id=frame_id,
             status=frame_data["status"],
-            result=frame_data["result"],
+            result=result,  # BovinoModel directamente
             error=frame_data["error"],
             created_at=frame_data["created_at"],
             updated_at=frame_data["updated_at"]
@@ -259,25 +274,19 @@ async def process_frame_with_clean_architecture(frame_id: str):
         logger.info(f"✅ Análisis completado usando Clean Architecture para frame {frame_id}")
         
         # Convertir entidad a modelo de API
-        result = BovinoAnalysisResponse(
-            frame_id=frame_id,
-            status=AnalysisStatus.COMPLETED,
-            result=BovinoModel(
-                raza=bovino_entity.raza,
-                caracteristicas=bovino_entity.caracteristicas,
-                confianza=bovino_entity.confianza,
-                peso_estimado=bovino_entity.peso_estimado,
-                timestamp=bovino_entity.timestamp,
-                detection_result=BovinoDetectionResult.BOVINO_DETECTED,
-                precision_score=bovino_entity.precision_score,
-                processing_time_ms=bovino_entity.processing_time_ms
-            ),
-            created_at=analysis_queue[frame_id]["created_at"],
-            updated_at=datetime.now()
+        bovino_model = BovinoModel(
+            raza=bovino_entity.raza,
+            caracteristicas=bovino_entity.caracteristicas,
+            confianza=bovino_entity.confianza,
+            peso_estimado=bovino_entity.peso_estimado,
+            timestamp=bovino_entity.timestamp,
+            detection_result=BovinoDetectionResult.BOVINO_DETECTED,
+            precision_score=bovino_entity.precision_score,
+            processing_time_ms=bovino_entity.processing_time_ms
         )
         
-        # Actualizar resultado
-        analysis_queue[frame_id]["result"] = result
+        # Guardar directamente el BovinoModel
+        analysis_queue[frame_id]["result"] = bovino_model
         analysis_queue[frame_id]["status"] = "completed"
         analysis_queue[frame_id]["updated_at"] = datetime.now()
         

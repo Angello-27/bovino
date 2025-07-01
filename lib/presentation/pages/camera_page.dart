@@ -222,6 +222,14 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       if (mounted && _permissionsGranted) {
         _logger.i('🎬 Iniciando captura de frames (sin análisis)...');
         _cameraBloc.add(StartCapture());
+        
+        // Activar análisis automáticamente después de 2 segundos (para pruebas)
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted && _permissionsGranted) {
+            _logger.i('🚀 Activando análisis automáticamente para pruebas...');
+            _startAnalysis();
+          }
+        });
       }
     });
   }
@@ -360,7 +368,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.contentTextLight.withOpacity(0.2),
+          color: AppColors.contentTextLight.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: IconButton(

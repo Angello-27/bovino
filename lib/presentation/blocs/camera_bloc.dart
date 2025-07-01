@@ -163,7 +163,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       }
 
       cameraService.startFrameCapture();
-      emit(CameraCapturing('')); // Estado inicial de captura
+      emit(const CameraCapturing('')); // Estado inicial de captura
 
       _logger.i('Captura de frames iniciada');
     } catch (e) {
@@ -214,7 +214,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       _logger.i('Reanudando captura de frames...');
 
       cameraService.resumeFrameCapture();
-      emit(CameraCapturing('')); // Estado inicial de captura
+      emit(const CameraCapturing('')); // Estado inicial de captura
 
       _logger.i('Captura de frames reanudada');
     } catch (e) {

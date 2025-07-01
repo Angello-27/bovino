@@ -112,6 +112,18 @@ class FrameAnalysisError extends FrameAnalysisState {
   List<Object?> get props => [message];
 }
 
+/// Evento interno para actualizar estado de procesamiento
+class _UpdateProcessingStateEvent extends FrameAnalysisEvent {}
+
+/// Evento interno para emitir resultado
+class _EmitResultEvent extends FrameAnalysisEvent {
+  final Map<String, dynamic> result;
+  const _EmitResultEvent(this.result);
+  
+  @override
+  List<Object?> get props => [result];
+}
+
 /// BLoC para manejar el análisis de frames usando BovinoBloc
 class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   late FrameAnalysisService _frameAnalysisService;
@@ -134,6 +146,11 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     on<SendFrameEvent>(_onSendFrame);
     on<ProcessFrameEvent>(_onProcessFrame);
     on<CheckFrameStatusEvent>(_onCheckFrameStatus);
+    on<_UpdateProcessingStateEvent>(_onUpdateProcessingState);
+    on<_EmitResultEvent>(_onEmitResult);
+    
+    // Inicializar listener del BovinoBloc
+    _listenToBovinoBloc();
   }
 
   void _initializeServices(FrameAnalysisService? frameAnalysisService, BovinoBloc? bovinoBloc) {
@@ -358,6 +375,73 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         add(CheckFrameStatusEvent(frameId: frameId));
       }
     });
+  }
+
+  /// Escuchar el estado del BovinoBloc para capturar frame_ids
+  void _listenToBovinoBloc() {
+    _logger.i('🎧 Configurando listener del BovinoBloc...');
+    _bovinoBloc.stream.listen((state) {
+      _logger.d('📡 Estado del BovinoBloc recibido: ${state.runtimeType}');
+      
+      if (state is BovinoSubmitted) {
+        // Frame enviado exitosamente - agregar a lista de pendientes
+        _logger.i('📋 Frame agregado a lista de pendientes: ${state.frameId}');
+        _pendingFrames.add(state.frameId);
+        _logger.i('📊 Total de frames pendientes: ${_pendingFrames.length}');
+        
+        // Disparar evento interno para actualizar estado
+        add(_UpdateProcessingStateEvent());
+      } else if (state is BovinoResult) {
+        // Frame procesado exitosamente
+        _logger.i('✅ Resultado recibido: ${state.bovino.raza}');
+        
+        final resultData = {
+          'raza': state.bovino.raza,
+          'peso': state.bovino.pesoEstimado.toString(),
+          'confianza': state.bovino.confianza.toString(),
+          'caracteristicas': state.bovino.caracteristicas.join(', '),
+        };
+        
+        // Disparar evento interno para emitir resultado
+        add(_EmitResultEvent(resultData));
+      } else if (state is BovinoError) {
+        _logger.e('❌ Error en BovinoBloc: ${state.failure.message}');
+      } else if (state is BovinoSubmitting) {
+        _logger.d('📤 BovinoBloc enviando frame: ${state.framePath}');
+      } else if (state is BovinoChecking) {
+        _logger.d('🔍 BovinoBloc verificando frame: ${state.frameId}');
+      } else {
+        _logger.d('📡 Estado del BovinoBloc: ${state.runtimeType}');
+      }
+    });
+    _logger.i('✅ Listener del BovinoBloc configurado correctamente');
+  }
+
+  /// Handler para actualizar estado de procesamiento
+  void _onUpdateProcessingState(
+    _UpdateProcessingStateEvent event,
+    Emitter<FrameAnalysisState> emit,
+  ) {
+    emit(FrameAnalysisProcessing(
+      pendingFrames: _pendingFrames.length,
+      processedFrames: _processedFrames,
+      successfulFrames: _successfulFrames,
+    ));
+  }
+
+  /// Handler para emitir resultado
+  void _onEmitResult(
+    _EmitResultEvent event,
+    Emitter<FrameAnalysisState> emit,
+  ) {
+    emit(FrameAnalysisSuccess(result: event.result));
+    
+    // También actualizar estado de procesamiento
+    emit(FrameAnalysisProcessing(
+      pendingFrames: _pendingFrames.length,
+      processedFrames: _processedFrames,
+      successfulFrames: _successfulFrames,
+    ));
   }
 
   @override
