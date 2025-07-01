@@ -25,6 +25,7 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
   Future<BovinoModel> analizarFrame(String framePath) async {
     try {
       _logger.i('📤 Enviando frame para análisis: $framePath');
+      _logger.i('🌐 URL del servidor: ${AppConstants.serverBaseUrl}${ApiEndpoints.analyzeFrame}');
 
       // Verificar que el archivo existe
       final file = File(framePath);
@@ -35,6 +36,18 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
           code: 'FILE_NOT_FOUND',
         );
       }
+      
+      // Verificar tamaño del archivo
+      final fileSize = await file.length();
+      _logger.i('📏 Tamaño del archivo: $fileSize bytes');
+      
+      if (fileSize == 0) {
+        _logger.e('❌ Archivo vacío: $framePath');
+        throw ValidationFailure(
+          message: 'El archivo está vacío: $framePath',
+          code: 'EMPTY_FILE',
+        );
+      }
 
       // Crear FormData para enviar la imagen
       final formData = FormData.fromMap({
@@ -42,6 +55,7 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
       });
 
       // Realizar petición POST al servidor
+      _logger.i('🚀 Enviando petición POST al servidor...');
       final response = await _dio.post(
         '${AppConstants.serverBaseUrl}${ApiEndpoints.analyzeFrame}',
         data: formData,
@@ -50,6 +64,8 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
           receiveTimeout: const Duration(seconds: 30),
         ),
       );
+      
+      _logger.i('📡 Respuesta recibida: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         _logger.i('✅ Frame analizado exitosamente');
