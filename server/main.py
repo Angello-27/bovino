@@ -151,10 +151,14 @@ async def submit_frame(
         logger.info(f"📏 Tamaño: {frame.size} bytes")
         logger.info(f"🔧 Tipo: {frame.content_type}")
         
-        # Validar archivo
-        if not frame.content_type or not frame.content_type.startswith('image/'):
+        # Validar archivo - aceptar tanto tipos de imagen como application/octet-stream
+        valid_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/octet-stream']
+        if not frame.content_type or frame.content_type not in valid_types:
             logger.error(f"❌ Tipo de archivo no válido: {frame.content_type}")
-            raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
+            logger.info(f"✅ Tipos válidos: {valid_types}")
+            raise HTTPException(status_code=400, detail=f"Archivo debe ser una imagen. Tipo recibido: {frame.content_type}")
+        
+        logger.info(f"✅ Tipo de archivo válido: {frame.content_type}")
         
         # Generar ID único
         frame_id = str(uuid.uuid4())
