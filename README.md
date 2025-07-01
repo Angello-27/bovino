@@ -12,6 +12,7 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 - 🤖 **Análisis remoto** usando TensorFlow en servidor Python
 - 🐄 **Identificación automática** de razas bovinas
 - ⚖️ **Estimación de peso** del animal según la raza
+- 🔄 **Flujo asíncrono** con HTTP polling para consulta de estado
 - 🎨 **Interfaz moderna** con Material Design 3
 - 🌙 **Temas claro y oscuro** con cambio dinámico
 - 🔒 **Manejo robusto de permisos** para Android 10-15
@@ -20,6 +21,27 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 - 🔧 **Inyección de dependencias modular**
 - 🚀 **Splash screen nativo** con animaciones fluidas
 - 🏗️ **Atomic Design** implementado completamente
+
+## 🔄 Flujo Asíncrono del Sistema
+
+### Arquitectura General
+```
+📱 App Flutter (Android) ←→ 🌐 Servidor Python (TensorFlow)
+```
+
+### Flujo de Análisis Asíncrono
+1. **Captura de Frame**: La app Flutter captura frames de la cámara en tiempo real
+2. **Envío Asíncrono**: Frame se envía al servidor Python via `POST /submit-frame`
+3. **Procesamiento**: Servidor procesa la imagen con TensorFlow en background
+4. **Consulta de Estado**: App consulta estado via `GET /check-status/{frame_id}` cada 2 segundos
+5. **Resultado**: Cuando el análisis está completo, se muestra en pantalla
+6. **Limpieza**: Ambos lados eliminan los datos del frame procesado
+
+### Estados del Frame
+- **pending**: Frame recibido, esperando procesamiento
+- **processing**: Frame siendo analizado por TensorFlow
+- **completed**: Análisis completado con resultado
+- **failed**: Error en el procesamiento
 
 ## 🏗️ Arquitectura
 
@@ -141,8 +163,8 @@ flutter pub get
 2. Asegúrate de que el servidor Python esté ejecutándose en `192.168.0.8`
 3. El servidor debe tener endpoints para:
    - Envío de frames: `POST /submit-frame` (análisis asíncrono)
-
-   - Respuesta incluye `peso_estimado` en kg
+   - Consulta de estado: `GET /check-status/{frame_id}` (HTTP polling)
+   - Health check: `GET /health` (verificación de conexión)
 
 ### 3. Permisos
 
@@ -184,7 +206,7 @@ flutter run
 ### Backend & APIs
 - **Servidor Python**: Con TensorFlow para análisis y estimación de peso
 - **Dio**: Cliente HTTP para envío de frames
-- **HTTP Polling**: Consulta periódica de estado
+- **HTTP Polling**: Consulta periódica de estado cada 2 segundos
 
 ### Cámara y Permisos
 - **Camera Plugin**: Acceso a cámara en tiempo real
@@ -363,6 +385,7 @@ test/
 
 - [Arquitectura](docs/ARQUITECTURA.md) - Documentación detallada de la arquitectura
 - [Reglas de Desarrollo](docs/REGLAS_DESARROLLO.md) - Convenciones y mejores prácticas
+- [Servidor Python](server/README.md) - Documentación del servidor TensorFlow con Clean Architecture
 
 ## 🤝 Contribución
 

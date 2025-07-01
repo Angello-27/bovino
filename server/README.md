@@ -2,7 +2,28 @@
 
 ## 📋 Descripción
 
-Servidor Python con FastAPI que implementa **Clean Architecture** para el análisis de ganado bovino en tiempo real. Procesa imágenes enviadas desde la aplicación Flutter y retorna análisis de razas con estimación de peso.
+Servidor Python con FastAPI que implementa **Clean Architecture** para el análisis de ganado bovino en tiempo real. Procesa imágenes enviadas desde la aplicación Flutter y retorna análisis de razas con estimación de peso mediante un **flujo asíncrono** con HTTP polling.
+
+## 🔄 Flujo Asíncrono del Sistema Completo
+
+### Arquitectura General
+```
+📱 App Flutter (Android) ←→ 🌐 Servidor Python (TensorFlow)
+```
+
+### Flujo de Análisis Asíncrono
+1. **Captura de Frame**: La app Flutter captura frames de la cámara en tiempo real
+2. **Envío Asíncrono**: Frame se envía al servidor Python via `POST /submit-frame`
+3. **Procesamiento**: Servidor procesa la imagen con TensorFlow en background
+4. **Consulta de Estado**: App consulta estado via `GET /check-status/{frame_id}` cada 2 segundos
+5. **Resultado**: Cuando el análisis está completo, se muestra en pantalla
+6. **Limpieza**: Ambos lados eliminan los datos del frame procesado
+
+### Estados del Frame
+- **pending**: Frame recibido, esperando procesamiento
+- **processing**: Frame siendo analizado por TensorFlow
+- **completed**: Análisis completado con resultado
+- **failed**: Error en el procesamiento
 
 ## 🚀 Lanzador Interactivo (Recomendado)
 
@@ -62,6 +83,41 @@ server/
 4. **Repository** → **DataSource** (implementación concreta)
 5. **DataSource** → **TensorFlowService** (infraestructura)
 6. **Respuesta** fluye de vuelta por las capas
+
+## 🤖 Modelo de Aprendizaje
+
+### Arquitectura del Modelo
+- **Base Model**: MobileNetV2 pre-entrenado con ImageNet
+- **Transfer Learning**: Fine-tuning para clasificación de razas bovinas
+- **Input**: Imágenes 224x224 píxeles RGB
+- **Output**: Probabilidades para 5 razas bovinas principales
+
+### Razas Soportadas
+- **Ayrshire**: Rojo y blanco, mediana, lechera, resistente
+- **Brown Swiss**: Marrón, grande, lechera, gentil
+- **Holstein**: Blanco y negro, grande, lechera, alta producción
+- **Jersey**: Marrón claro, pequeña, lechera, alta grasa
+- **Red Dane**: Rojo, grande, lechera, europeo
+
+### Estimación de Peso
+El modelo estima el peso basado en:
+- **Raza identificada**: Peso promedio de la raza
+- **Confianza del modelo**: Ajuste basado en la certeza
+- **Características visuales**: Análisis de tamaño y proporciones
+- **Rango válido**: 200-1200 kg
+
+### Entrenamiento
+```bash
+# Entrenar modelo desde cero
+python train_model.py
+
+# Configuración de entrenamiento
+- Epochs: 20
+- Batch size: 32
+- Learning rate: 0.001
+- Optimizer: Adam
+- Loss: Sparse Categorical Crossentropy
+```
 
 ## 🚀 Instalación y Configuración
 
@@ -143,8 +199,6 @@ Consulta el estado de un análisis.
 ### GET `/health`
 Verifica el estado del servidor.
 - **Output**: Estado, cola de análisis, modelo
-
-
 
 ### GET `/stats`
 Estadísticas del servidor.
@@ -267,3 +321,60 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 docker build -t bovino-server .
 docker run -p 8000:8000 bovino-server
 ```
+
+## 📱 Comunicación con Flutter
+
+### Endpoints Utilizados por Flutter
+- `POST /submit-frame`: Envío de frames para análisis
+- `GET /check-status/{frame_id}`: Consulta de estado (HTTP polling cada 2 segundos)
+- `GET /health`: Verificación de conexión
+
+### Formato de Respuesta
+```json
+{
+  "frame_id": "uuid-string",
+  "status": "completed",
+  "result": {
+    "raza": "Holstein",
+    "caracteristicas": ["Blanco y negro", "Grande", "Lechera"],
+    "confianza": 0.85,
+    "peso_estimado": 750.0,
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+### Manejo de Errores
+- **404**: Frame no encontrado
+- **400**: Tipo de archivo no válido
+- **500**: Error interno del servidor
+
+## 📄 Documentación Relacionada
+
+- [README Principal](../README.md) - Documentación completa del proyecto
+- [Arquitectura](../docs/ARQUITECTURA.md) - Documentación de la arquitectura Flutter
+- [Reglas de Desarrollo](../docs/REGLAS_DESARROLLO.md) - Convenciones del proyecto
+
+## 🔄 Mejoras Recientes
+
+### Flujo Asíncrono
+- ✅ **Análisis asíncrono** con cola en memoria
+- ✅ **HTTP polling** cada 2 segundos
+- ✅ **Limpieza automática** de frames antiguos
+- ✅ **Estados de frame** bien definidos
+
+### Modelo de Aprendizaje
+- ✅ **MobileNetV2** como modelo base
+- ✅ **Transfer learning** para razas bovinas
+- ✅ **Estimación de peso** basada en raza y características
+- ✅ **5 razas principales** soportadas
+
+### Clean Architecture
+- ✅ **Separación de capas** clara
+- ✅ **Entidades de dominio** inmutables
+- ✅ **Casos de uso** bien definidos
+- ✅ **Repositorios** con contratos
+
+---
+
+*Servidor desarrollado con ❤️ siguiendo Clean Architecture, optimizado para análisis asíncrono de ganado bovino con TensorFlow.*

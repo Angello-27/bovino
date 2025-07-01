@@ -4,6 +4,33 @@
 
 **Bovino IA** es una aplicación móvil **Android** que captura frames de la cámara en tiempo real y los envía a un servidor Python con TensorFlow para el reconocimiento automático de razas bovinas y estimación de peso, recibiendo notificaciones asíncronas con los resultados.
 
+## 🔄 Flujo Asíncrono del Sistema Completo
+
+### Arquitectura General
+```
+📱 App Flutter (Android) ←→ 🌐 Servidor Python (TensorFlow)
+```
+
+### Flujo de Análisis Asíncrono
+1. **Captura de Frame**: La app Flutter captura frames de la cámara en tiempo real
+2. **Envío Asíncrono**: Frame se envía al servidor Python via `POST /submit-frame`
+3. **Procesamiento**: Servidor procesa la imagen con TensorFlow en background
+4. **Consulta de Estado**: App consulta estado via `GET /check-status/{frame_id}` cada 2 segundos
+5. **Resultado**: Cuando el análisis está completo, se muestra en pantalla
+6. **Limpieza**: Ambos lados eliminan los datos del frame procesado
+
+### Estados del Frame
+- **pending**: Frame recibido, esperando procesamiento
+- **processing**: Frame siendo analizado por TensorFlow
+- **completed**: Análisis completado con resultado
+- **failed**: Error en el procesamiento
+
+### Comunicación HTTP
+- **Envío**: `POST /submit-frame` con archivo de imagen
+- **Consulta**: `GET /check-status/{frame_id}` cada 2 segundos
+- **Health Check**: `GET /health` para verificación de conexión
+- **Estadísticas**: `GET /stats` para métricas del servidor
+
 ## 🏛️ Principios Arquitectónicos
 
 ### 1. **Clean Architecture**
@@ -140,6 +167,28 @@ Frame → TensorFlowServerDataSourceImpl → BovinoRepository → BovinoBloc →
 Servidor → HTTP Polling → BovinoBloc → UI
 ```
 
+## 🤖 Modelo de Aprendizaje (Servidor Python)
+
+### Arquitectura del Modelo
+- **Base Model**: MobileNetV2 pre-entrenado con ImageNet
+- **Transfer Learning**: Fine-tuning para clasificación de razas bovinas
+- **Input**: Imágenes 224x224 píxeles RGB
+- **Output**: Probabilidades para 5 razas bovinas principales
+
+### Razas Soportadas
+- **Ayrshire**: Rojo y blanco, mediana, lechera, resistente
+- **Brown Swiss**: Marrón, grande, lechera, gentil
+- **Holstein**: Blanco y negro, grande, lechera, alta producción
+- **Jersey**: Marrón claro, pequeña, lechera, alta grasa
+- **Red Dane**: Rojo, grande, lechera, europeo
+
+### Estimación de Peso
+El modelo estima el peso basado en:
+- **Raza identificada**: Peso promedio de la raza
+- **Confianza del modelo**: Ajuste basado en la certeza
+- **Características visuales**: Análisis de tamaño y proporciones
+- **Rango válido**: 200-1200 kg
+
 ## 🎨 Patrones de Diseño
 
 ### 1. **Repository Pattern**
@@ -189,7 +238,7 @@ Servidor → HTTP Polling → BovinoBloc → UI
 
 ### Comunicación
 - **Dio**: Cliente HTTP con interceptores
-- **HTTP Polling**: Consulta periódica de estado
+- **HTTP Polling**: Consulta periódica de estado cada 2 segundos
 
 ### Cámara y Permisos
 - **camera**: Acceso a cámara optimizado
@@ -422,6 +471,12 @@ _getIt.registerFactory<SplashBloc>(
 
 ## 🔄 Mejoras Recientes
 
+### Flujo Asíncrono
+- ✅ **Análisis asíncrono** con cola en memoria
+- ✅ **HTTP polling** cada 2 segundos
+- ✅ **Limpieza automática** de frames antiguos
+- ✅ **Estados de frame** bien definidos
+
 ### Splash Screen Nativo
 - ✅ **Configuración nativa** en Android
 - ✅ **Animaciones fluidas** con AnimationController
@@ -461,6 +516,12 @@ _getIt.registerFactory<SplashBloc>(
 - ✅ **Sin conflictos** con IDE
 - ✅ **Mejor análisis** de código
 
+## 📄 Documentación Relacionada
+
+- [README Principal](../README.md) - Documentación completa del proyecto
+- [Servidor Python](../server/README.md) - Documentación del servidor TensorFlow
+- [Reglas de Desarrollo](REGLAS_DESARROLLO.md) - Convenciones del proyecto
+
 ---
 
-*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern, Atomic Design y SOLID Principles, optimizada para Android.* 
+*Esta arquitectura está diseñada para ser escalable, mantenible y testeable, siguiendo las mejores prácticas de Clean Architecture, BLoC Pattern, Atomic Design y SOLID Principles, optimizada para Android con flujo asíncrono completo.* 
