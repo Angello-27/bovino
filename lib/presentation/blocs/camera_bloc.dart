@@ -110,10 +110,22 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     Emitter<CameraState> emit,
   ) async {
     try {
+      // Verificar que el BLoC no esté cerrado
+      if (isClosed) {
+        _logger.w('⚠️ CameraBloc cerrado - ignorando inicialización');
+        return;
+      }
+      
       emit(CameraLoading());
       _logger.i('Inicializando cámara...');
 
       await cameraService.initialize();
+      
+      // Verificar nuevamente que el BLoC no esté cerrado antes de continuar
+      if (isClosed) {
+        _logger.w('⚠️ CameraBloc cerrado durante inicialización - abortando');
+        return;
+      }
       
       // Configurar la suscripción al stream de frames
       _setupFrameStreamSubscription();
@@ -122,7 +134,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       _logger.i('Cámara inicializada correctamente');
     } catch (e) {
       _logger.e('Error al inicializar cámara: $e');
-      emit(CameraError(UnknownFailure(message: e.toString())));
+      if (!isClosed) {
+        emit(CameraError(UnknownFailure(message: e.toString())));
+      }
     }
   }
 
@@ -135,6 +149,12 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     _frameSubscription = cameraService.frameStream.listen(
       (framePath) {
         _logger.d('Frame capturado: $framePath');
+        
+        // Verificar que el BLoC no esté cerrado antes de enviar eventos
+        if (isClosed) {
+          _logger.d('⚠️ CameraBloc cerrado - ignorando frame capturado');
+          return;
+        }
         
         // Enviar frame al FrameAnalysisBloc SOLO si el análisis está activado
         if (_analysisEnabled) {
@@ -155,6 +175,12 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     Emitter<CameraState> emit,
   ) async {
     try {
+      // Verificar que el BLoC no esté cerrado
+      if (isClosed) {
+        _logger.w('⚠️ CameraBloc cerrado - ignorando inicio de captura');
+        return;
+      }
+      
       _logger.i('Iniciando captura de frames...');
 
       // Verificar que el stream esté configurado
@@ -168,7 +194,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
       _logger.i('Captura de frames iniciada');
     } catch (e) {
       _logger.e('Error al iniciar captura: $e');
-      emit(CameraError(UnknownFailure(message: e.toString())));
+      if (!isClosed) {
+        emit(CameraError(UnknownFailure(message: e.toString())));
+      }
     }
   }
 

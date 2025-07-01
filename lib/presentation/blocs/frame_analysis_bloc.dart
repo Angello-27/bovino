@@ -135,6 +135,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   
   Timer? _frameTimer;
   Timer? _statusTimer;
+  StreamSubscription? _bovinoBlocSubscription;
   final List<String> _pendingFrames = [];
   final Map<String, dynamic> _results = {};
   
@@ -433,7 +434,13 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   /// Escuchar el estado del BovinoBloc para capturar frame_ids
   void _listenToBovinoBloc() {
     _logger.i('🎧 Configurando listener del BovinoBloc...');
-    _bovinoBloc.stream.listen((state) {
+    _bovinoBlocSubscription = _bovinoBloc.stream.listen((state) {
+      // Verificar que el BLoC no esté cerrado antes de agregar eventos
+      if (isClosed) {
+        _logger.d('⚠️ BLoC cerrado - ignorando evento del BovinoBloc');
+        return;
+      }
+      
       _logger.d('📡 Estado del BovinoBloc recibido: ${state.runtimeType}');
       
       if (state is BovinoSubmitted) {
@@ -515,6 +522,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     _logger.i('🔌 Cerrando FrameAnalysisBloc');
     _frameTimer?.cancel();
     _statusTimer?.cancel();
+    _bovinoBlocSubscription?.cancel();
     return super.close();
   }
 } 
