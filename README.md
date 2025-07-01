@@ -35,7 +35,6 @@ lib/
 │   ├── di/                 # Inyección de dependencias modular
 │   │   ├── dependency_injection.dart    # Coordinador principal
 │   │   ├── http_injection.dart          # Configuración HTTP
-│   │   ├── websocket_injection.dart     # Configuración WebSocket
 │   │   ├── services_injection.dart      # Servicios core
 │   │   ├── data_injection.dart          # Capa de datos
 │   │   └── presentation_injection.dart  # Capa de presentación
@@ -141,8 +140,8 @@ flutter pub get
 1. Configura la URL del servidor en `lib/core/constants/app_constants.dart`
 2. Asegúrate de que el servidor Python esté ejecutándose en `192.168.0.8`
 3. El servidor debe tener endpoints para:
-   - Envío de frames: `POST /analyze-frame`
-   - WebSocket para notificaciones: `ws://192.168.0.8/ws`
+   - Envío de frames: `POST /submit-frame` (análisis asíncrono)
+
    - Respuesta incluye `peso_estimado` en kg
 
 ### 3. Permisos
@@ -165,7 +164,7 @@ flutter run
 3. **Captura automática**: Se capturan frames cada X segundos
 4. **Envío al servidor**: Los frames se envían al servidor TensorFlow
 5. **Análisis remoto**: El servidor procesa la imagen con TensorFlow
-6. **Notificación**: El servidor envía el resultado via WebSocket
+6. **Consulta de estado**: La app consulta el estado del frame periódicamente
 7. **Visualización**: Se muestra la raza identificada, peso estimado y características
 
 ### Interfaz
@@ -185,7 +184,7 @@ flutter run
 ### Backend & APIs
 - **Servidor Python**: Con TensorFlow para análisis y estimación de peso
 - **Dio**: Cliente HTTP para envío de frames
-- **WebSocket**: Notificaciones asíncronas
+- **HTTP Polling**: Consulta periódica de estado
 
 ### Cámara y Permisos
 - **Camera Plugin**: Acceso a cámara en tiempo real
@@ -267,7 +266,7 @@ final theme = ThemeManager.getThemeByBool(false); // Tema claro
 
 ### Comunicación con Servidor
 - Envío de frames via HTTP
-- Notificaciones via WebSocket
+- Consulta periódica de estado via HTTP
 - Manejo de reconexión automática
 - Respuesta con peso estimado
 

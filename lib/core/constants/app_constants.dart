@@ -68,11 +68,8 @@ class AppConstants {
 }
 
 class ApiEndpoints {
-  // Endpoints legacy (mantener compatibilidad)
-  static const String analyzeFrame = '/analyze-frame';
+  // Endpoints para análisis asíncrono
   static const String healthCheck = '/health';
-  
-  // Nuevos endpoints para análisis asíncrono
   static const String submitFrame = '/submit-frame';
   static const String checkStatus = '/check-status';
 }

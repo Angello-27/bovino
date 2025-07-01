@@ -1,21 +1,22 @@
-import '../../models/bovino_model.dart';
-
 /// Contrato abstracto para comunicación con servidor TensorFlow
 ///
 /// Define las operaciones disponibles para:
-/// - Análisis de frames
+/// - Envío de frames para análisis asíncrono
+/// - Verificación de estado de frames
 /// - Verificación de conexión
-/// - Notificaciones asíncronas
-/// - Gestión de WebSocket
+/// - Gestión de HTTP Polling
 abstract class TensorFlowServerDataSource {
-  /// Analiza un frame de ganado bovino y retorna información detallada.
+  /// Envía un frame para análisis asíncrono.
   ///
-  /// [framePath] - Ruta del frame a analizar
+  /// [framePath] - Ruta del frame a enviar
+  /// Retorna el ID del frame para consulta posterior
+  Future<String> submitFrame(String framePath);
+
+  /// Verifica el estado de un frame enviado.
   ///
-  /// Retorna un [BovinoModel] con la información analizada.
-  ///
-  /// Lanza [NetworkFailure] si hay problemas de conexión.
-  Future<BovinoModel> analizarFrame(String framePath);
+  /// [frameId] - ID del frame a consultar
+  /// Retorna el estado y resultado del análisis
+  Future<Map<String, dynamic>?> checkFrameStatus(String frameId);
 
   /// Verifica la conexión con el servidor TensorFlow.
   ///

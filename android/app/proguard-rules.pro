@@ -46,7 +46,7 @@
 # Mantener clases de la aplicación
 -keep class com.example.bovino.** { *; }
 
-# Reglas para WebSocket y HTTP
+# Reglas para HTTP
 -keep class okhttp3.** { *; }
 -keep class retrofit2.** { *; }
 -dontwarn okhttp3.**

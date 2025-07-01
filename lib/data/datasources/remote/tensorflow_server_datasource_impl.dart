@@ -3,13 +3,13 @@ import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
-import '../../models/bovino_model.dart';
 import 'tensorflow_server_datasource.dart';
 
 /// Implementación concreta del datasource para comunicación con servidor TensorFlow
 ///
 /// Proporciona funcionalidades para:
-/// - Envío de frames al servidor para análisis
+/// - Envío de frames al servidor para análisis asíncrono
+/// - Verificación de estado de frames
 /// - Verificación de estado del servidor
 /// - Manejo robusto de errores de conexión
 class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
@@ -22,10 +22,9 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
   TensorFlowServerDataSourceImpl(this._dio);
 
   @override
-  Future<BovinoModel> analizarFrame(String framePath) async {
+  Future<String> submitFrame(String framePath) async {
     try {
-      _logger.i('📤 Enviando frame para análisis: $framePath');
-      _logger.i('🌐 URL del servidor: ${AppConstants.serverBaseUrl}${ApiEndpoints.analyzeFrame}');
+      _logger.i('📤 Enviando frame para análisis asíncrono: $framePath');
 
       // Verificar que el archivo existe
       final file = File(framePath);
@@ -36,18 +35,6 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
           code: 'FILE_NOT_FOUND',
         );
       }
-      
-      // Verificar tamaño del archivo
-      final fileSize = await file.length();
-      _logger.i('📏 Tamaño del archivo: $fileSize bytes');
-      
-      if (fileSize == 0) {
-        _logger.e('❌ Archivo vacío: $framePath');
-        throw ValidationFailure(
-          message: 'El archivo está vacío: $framePath',
-          code: 'EMPTY_FILE',
-        );
-      }
 
       // Crear FormData para enviar la imagen
       final formData = FormData.fromMap({
@@ -55,37 +42,59 @@ class TensorFlowServerDataSourceImpl implements TensorFlowServerDataSource {
       });
 
       // Realizar petición POST al servidor
-      _logger.i('🚀 Enviando petición POST al servidor...');
       final response = await _dio.post(
-        '${AppConstants.serverBaseUrl}${ApiEndpoints.analyzeFrame}',
+        '${AppConstants.serverBaseUrl}${ApiEndpoints.submitFrame}',
         data: formData,
         options: Options(
           sendTimeout: const Duration(seconds: 30),
           receiveTimeout: const Duration(seconds: 30),
         ),
       );
-      
-      _logger.i('📡 Respuesta recibida: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        _logger.i('✅ Frame analizado exitosamente');
-        return BovinoModel.fromJson(response.data);
+        final frameId = response.data['frame_id'] as String;
+        _logger.i('✅ Frame enviado exitosamente: $frameId');
+        return frameId;
       } else {
-        _logger.e('❌ Error del servidor: ${response.statusCode}');
         throw NetworkFailure(
-          message: 'Error en el servidor: ${response.statusCode}',
+          message: 'Error del servidor: ${response.statusCode}',
           code: response.statusCode.toString(),
         );
       }
     } on DioException catch (e) {
-      _logger.e('❌ Error de red al analizar frame: ${e.message}');
+      _logger.e('❌ Error de red al enviar frame: ${e.message}');
       throw NetworkFailure(
         message: 'Error de conexión: ${e.message}',
         code: e.response?.statusCode.toString(),
       );
     } catch (e) {
-      _logger.e('❌ Error inesperado al analizar frame: $e');
+      _logger.e('❌ Error inesperado al enviar frame: $e');
       throw UnknownFailure(message: e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> checkFrameStatus(String frameId) async {
+    try {
+      _logger.d('🔍 Verificando estado de frame: $frameId');
+
+      final response = await _dio.get(
+        '${AppConstants.serverBaseUrl}${ApiEndpoints.checkStatus}/$frameId',
+        options: Options(
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        _logger.w('⚠️ Frame no encontrado: $frameId');
+        return null;
+      }
+    } catch (e) {
+      _logger.e('❌ Error al verificar estado: $e');
+      return null;
     }
   }
 

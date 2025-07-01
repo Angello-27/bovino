@@ -144,10 +144,7 @@ Consulta el estado de un análisis.
 Verifica el estado del servidor.
 - **Output**: Estado, cola de análisis, modelo
 
-### POST `/analyze-frame` (Legacy)
-Análisis síncrono directo.
-- **Input**: Archivo de imagen
-- **Output**: Resultado inmediato
+
 
 ### GET `/stats`
 Estadísticas del servidor.

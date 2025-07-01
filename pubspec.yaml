@@ -2,7 +2,7 @@ name: bovino
 description: "Aplicación para reconocimiento de ganado bovino usando cámara en vivo y TensorFlow"
 publish_to: 'none'
 
-version: 1.1.0
+version: 1.1.2
 
 environment:
   sdk: '>=3.7.0 <4.0.0'
@@ -36,7 +36,6 @@ dependencies:
   flutter_bloc: ^8.1.4
   go_router: ^14.2.7
   
-  # WebSocket para notificaciones asíncronas
   logger: ^2.0.2
   uuid: ^4.2.1
 

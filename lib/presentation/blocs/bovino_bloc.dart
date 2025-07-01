@@ -14,14 +14,28 @@ abstract class BovinoEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class AnalizarFrameEvent extends BovinoEvent {
-  final String imagePath;
+/// Evento para enviar un frame para análisis asíncrono
+class SubmitFrameForAnalysis extends BovinoEvent {
+  final String framePath;
 
-  const AnalizarFrameEvent(this.imagePath);
+  const SubmitFrameForAnalysis(this.framePath);
 
   @override
-  List<Object?> get props => [imagePath];
+  List<Object?> get props => [framePath];
 }
+
+/// Evento para verificar el estado de un frame
+class CheckFrameStatus extends BovinoEvent {
+  final String frameId;
+
+  const CheckFrameStatus(this.frameId);
+
+  @override
+  List<Object?> get props => [frameId];
+}
+
+/// Evento para limpiar el estado actual
+class ClearBovinoState extends BovinoEvent {}
 
 // Estados para BovinoBloc
 abstract class BovinoState extends Equatable {
@@ -33,7 +47,32 @@ abstract class BovinoState extends Equatable {
 
 class BovinoInitial extends BovinoState {}
 
-class BovinoAnalyzing extends BovinoState {}
+class BovinoSubmitting extends BovinoState {
+  final String framePath;
+
+  const BovinoSubmitting(this.framePath);
+
+  @override
+  List<Object?> get props => [framePath];
+}
+
+class BovinoSubmitted extends BovinoState {
+  final String frameId;
+
+  const BovinoSubmitted(this.frameId);
+
+  @override
+  List<Object?> get props => [frameId];
+}
+
+class BovinoChecking extends BovinoState {
+  final String frameId;
+
+  const BovinoChecking(this.frameId);
+
+  @override
+  List<Object?> get props => [frameId];
+}
 
 class BovinoResult extends BovinoState {
   final BovinoEntity bovino;
@@ -53,40 +92,83 @@ class BovinoError extends BovinoState {
   List<Object?> get props => [failure];
 }
 
-// Bloc para manejar análisis de bovinos
+// Bloc para manejar análisis de bovinos con flujo asíncrono
 class BovinoBloc extends Bloc<BovinoEvent, BovinoState> {
   final BovinoRepository repository;
   final Logger _logger = Logger();
 
   BovinoBloc({required this.repository}) : super(BovinoInitial()) {
-    on<AnalizarFrameEvent>(_onAnalizarFrame);
+    on<SubmitFrameForAnalysis>(_onSubmitFrameForAnalysis);
+    on<CheckFrameStatus>(_onCheckFrameStatus);
+    on<ClearBovinoState>(_onClearBovinoState);
   }
 
-  Future<void> _onAnalizarFrame(
-    AnalizarFrameEvent event,
+  /// Maneja el envío de un frame para análisis asíncrono
+  Future<void> _onSubmitFrameForAnalysis(
+    SubmitFrameForAnalysis event,
     Emitter<BovinoState> emit,
   ) async {
     try {
-      emit(BovinoAnalyzing());
-      _logger.i('Analizando frame: ${event.imagePath}');
+      _logger.i('📤 Enviando frame para análisis: ${event.framePath}');
+      emit(BovinoSubmitting(event.framePath));
 
-      final resultado = await repository.analizarFrame(event.imagePath);
+      final result = await repository.submitFrameForAnalysis(event.framePath);
 
-      resultado.fold(
+      result.fold(
         (failure) {
-          _logger.e('Error al analizar frame: ${failure.message}');
+          _logger.e('❌ Error al enviar frame: ${failure.message}');
           emit(BovinoError(failure));
         },
-        (bovino) {
-          _logger.i(
-            'Análisis exitoso - Raza: ${bovino.raza}, Peso: ${bovino.pesoFormateado}',
-          );
-          emit(BovinoResult(bovino));
+        (frameId) {
+          _logger.i('✅ Frame enviado exitosamente: $frameId');
+          emit(BovinoSubmitted(frameId));
         },
       );
     } catch (e) {
-      _logger.e('Error inesperado en BovinoBloc: $e');
+      _logger.e('❌ Error inesperado al enviar frame: $e');
       emit(BovinoError(UnknownFailure(message: e.toString())));
     }
+  }
+
+  /// Maneja la verificación del estado de un frame
+  Future<void> _onCheckFrameStatus(
+    CheckFrameStatus event,
+    Emitter<BovinoState> emit,
+  ) async {
+    try {
+      _logger.d('🔍 Verificando estado de frame: ${event.frameId}');
+      emit(BovinoChecking(event.frameId));
+
+      final result = await repository.checkFrameStatus(event.frameId);
+
+      result.fold(
+        (failure) {
+          _logger.e('❌ Error al verificar estado: ${failure.message}');
+          emit(BovinoError(failure));
+        },
+        (bovino) {
+          if (bovino != null) {
+            _logger.i('✅ Análisis completado: ${bovino.raza}');
+            emit(BovinoResult(bovino));
+          } else {
+            _logger.d('⏳ Frame aún procesándose: ${event.frameId}');
+            // Mantener el estado actual para continuar polling
+            emit(BovinoChecking(event.frameId));
+          }
+        },
+      );
+    } catch (e) {
+      _logger.e('❌ Error inesperado al verificar estado: $e');
+      emit(BovinoError(UnknownFailure(message: e.toString())));
+    }
+  }
+
+  /// Limpia el estado actual del bloc
+  void _onClearBovinoState(
+    ClearBovinoState event,
+    Emitter<BovinoState> emit,
+  ) {
+    _logger.i('🧹 Limpiando estado del BovinoBloc');
+    emit(BovinoInitial());
   }
 }

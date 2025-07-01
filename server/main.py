@@ -303,37 +303,7 @@ def cleanup_old_frames():
         del analysis_queue[frame_id]
         print(f"🗑️ Frame {frame_id} eliminado por antigüedad")
 
-@app.post("/analyze-frame")
-async def analyze_frame_legacy(file: UploadFile = File(...)):
-    """
-    Endpoint legacy para análisis síncrono usando Clean Architecture
-    """
-    try:
-        if not file.content_type or not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="Archivo debe ser una imagen")
-        
-        image_content = await file.read()
-        
-        # Usar Clean Architecture
-        logger.info("🎯 Ejecutando análisis síncrono con Clean Architecture...")
-        bovino_entity = await datasource.analyze_bovino(image_content)
-        
-        # Convertir a modelo de API
-        result = BovinoModel(
-            raza=bovino_entity.raza,
-            caracteristicas=bovino_entity.caracteristicas,
-            confianza=bovino_entity.confianza,
-            peso_estimado=bovino_entity.peso_estimado,
-            timestamp=bovino_entity.timestamp,
-            detection_result=BovinoDetectionResult.BOVINO_DETECTED,
-            precision_score=bovino_entity.precision_score,
-            processing_time_ms=bovino_entity.processing_time_ms
-        )
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en análisis: {str(e)}")
+
 
 @app.get("/stats")
 async def get_stats():

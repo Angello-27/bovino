@@ -3,12 +3,15 @@ import 'package:equatable/equatable.dart';
 import 'package:logger/logger.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 
 // Core
 import '../../core/services/frame_analysis_service.dart';
-// import '../../core/di/dependency_injection.dart';
+import 'bovino_bloc.dart';
+
+// Data
+import '../../data/datasources/remote/tensorflow_server_datasource.dart';
+import '../../domain/repositories/bovino_repository.dart';
 
 /// Eventos del FrameAnalysisBloc
 abstract class FrameAnalysisEvent extends Equatable {
@@ -109,9 +112,10 @@ class FrameAnalysisError extends FrameAnalysisState {
   List<Object?> get props => [message];
 }
 
-/// BLoC para manejar el análisis de frames
+/// BLoC para manejar el análisis de frames usando BovinoBloc
 class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   late FrameAnalysisService _frameAnalysisService;
+  late BovinoBloc _bovinoBloc;
   final Logger _logger = Logger();
   
   Timer? _frameTimer;
@@ -122,9 +126,9 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   int _processedFrames = 0;
   int _successfulFrames = 0;
 
-  FrameAnalysisBloc({FrameAnalysisService? frameAnalysisService}) 
+  FrameAnalysisBloc({FrameAnalysisService? frameAnalysisService, BovinoBloc? bovinoBloc}) 
       : super(FrameAnalysisInitial()) {
-    _initializeFrameAnalysisService(frameAnalysisService);
+    _initializeServices(frameAnalysisService, bovinoBloc);
     on<StartFrameAnalysisEvent>(_onStartFrameAnalysis);
     on<StopFrameAnalysisEvent>(_onStopFrameAnalysis);
     on<SendFrameEvent>(_onSendFrame);
@@ -132,26 +136,38 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     on<CheckFrameStatusEvent>(_onCheckFrameStatus);
   }
 
-  void _initializeFrameAnalysisService(FrameAnalysisService? frameAnalysisService) {
+  void _initializeServices(FrameAnalysisService? frameAnalysisService, BovinoBloc? bovinoBloc) {
     try {
+      // Inicializar FrameAnalysisService
       if (frameAnalysisService != null) {
         _frameAnalysisService = frameAnalysisService;
       } else if (GetIt.instance.isRegistered<FrameAnalysisService>()) {
         _frameAnalysisService = GetIt.instance<FrameAnalysisService>();
-      } else if (GetIt.instance.isRegistered<Dio>()) {
-        final dio = GetIt.instance<Dio>();
-        _frameAnalysisService = FrameAnalysisService(dio);
       } else {
-        // Fallback: crear con Dio por defecto
-        final dio = Dio();
-        _frameAnalysisService = FrameAnalysisService(dio);
+        // Fallback: crear con datasource por defecto
+        final datasource = GetIt.instance.isRegistered<TensorFlowServerDataSource>()
+            ? GetIt.instance<TensorFlowServerDataSource>()
+            : throw Exception('TensorFlowServerDataSource no registrado');
+        _frameAnalysisService = FrameAnalysisService(datasource);
       }
       _logger.i('✅ FrameAnalysisService inicializado correctamente');
+
+      // Inicializar BovinoBloc
+      if (bovinoBloc != null) {
+        _bovinoBloc = bovinoBloc;
+      } else if (GetIt.instance.isRegistered<BovinoBloc>()) {
+        _bovinoBloc = GetIt.instance<BovinoBloc>();
+      } else {
+        // Fallback: crear BovinoBloc manualmente
+        final repository = GetIt.instance.isRegistered<BovinoRepository>()
+            ? GetIt.instance<BovinoRepository>()
+            : throw Exception('BovinoRepository no registrado');
+        _bovinoBloc = BovinoBloc(repository: repository);
+      }
+      _logger.i('✅ BovinoBloc inicializado correctamente');
     } catch (e) {
-      _logger.e('❌ Error al inicializar FrameAnalysisService: $e');
-      // Fallback final
-      final dio = Dio();
-      _frameAnalysisService = FrameAnalysisService(dio);
+      _logger.e('❌ Error al inicializar servicios: $e');
+      rethrow;
     }
   }
 
@@ -193,6 +209,9 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
       // Limpiar frames pendientes
       _pendingFrames.clear();
       
+      // Limpiar estado del BovinoBloc
+      _bovinoBloc.add(ClearBovinoState());
+      
       // Volver al estado inicial
       emit(FrameAnalysisInitial());
       _logger.i('✅ Análisis de frames detenido');
@@ -210,13 +229,10 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     try {
       _logger.d('📤 Enviando frame: ${event.frameId}');
       
-      final frameId = await _frameAnalysisService.submitFrameForAnalysis(
-        event.imageFile,
-        metadata: {'source': 'camera', 'timestamp': DateTime.now().toIso8601String()},
-      );
+      // Usar BovinoBloc para enviar el frame
+      _bovinoBloc.add(SubmitFrameForAnalysis(event.imageFile.path));
       
-      _pendingFrames.add(frameId);
-      _logger.d('✅ Frame enviado exitosamente: $frameId');
+      _logger.d('✅ Frame enviado exitosamente: ${event.frameId}');
     } catch (e) {
       _logger.e('❌ Error al enviar frame: $e');
     }
@@ -237,17 +253,18 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         return;
       }
       
-      // Intentar analizar el frame
+      // Usar BovinoBloc para enviar frame para análisis asíncrono
       try {
-        final result = await _frameAnalysisService.analyzeFrameSync(file);
-        _logger.i('✅ Frame analizado exitosamente');
+        _bovinoBloc.add(SubmitFrameForAnalysis(event.framePath));
+        _logger.i('✅ Frame enviado para análisis asíncrono: ${event.framePath}');
         
-        // Emitir resultado exitoso
-        emit(FrameAnalysisSuccess(result: result));
+        // Iniciar verificación de estado si no está activa
+        if (_statusTimer == null || !_statusTimer!.isActive) {
+          _startStatusPolling();
+        }
         
-        _successfulFrames++;
       } catch (e) {
-        _logger.w('⚠️ Error al analizar frame (servidor no disponible): $e');
+        _logger.w('⚠️ Error al enviar frame (servidor no disponible): $e');
         // NO emitir error - solo continuar capturando
         // La aplicación debe funcionar aunque el servidor no esté disponible
       }
@@ -268,6 +285,12 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     try {
       _logger.d('🔍 Verificando estado de frame: ${event.frameId}');
       
+      // Usar BovinoBloc para verificar el estado
+      _bovinoBloc.add(CheckFrameStatus(event.frameId));
+      
+      // Escuchar el estado del BovinoBloc para obtener el resultado
+      // Nota: En una implementación real, esto se manejaría con streams
+      // Por ahora, usamos el servicio directamente para obtener el estado
       final result = await _frameAnalysisService.checkFrameStatus(event.frameId);
       
       if (result != null && result['status'] == 'completed' && result['result'] != null) {
@@ -279,7 +302,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         final bovinoResult = result['result'] as Map<String, dynamic>;
         final resultData = {
           'raza': bovinoResult['raza'] ?? 'No detectado',
-          'peso': bovinoResult['peso']?.toString() ?? '0',
+          'peso': bovinoResult['peso_estimado']?.toString() ?? '0',
           'confianza': bovinoResult['confianza']?.toString() ?? '0',
           'caracteristicas': (bovinoResult['caracteristicas'] as List<dynamic>?)?.join(', ') ?? '',
         };
@@ -316,6 +339,25 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     } catch (e) {
       _logger.e('❌ Error al verificar estado de frame: $e');
     }
+  }
+
+  /// Iniciar polling de estado de frames
+  void _startStatusPolling() {
+    _logger.i('🔄 Iniciando polling de estado de frames...');
+    
+    _statusTimer?.cancel();
+    _statusTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_pendingFrames.isEmpty) {
+        _logger.d('📭 No hay frames pendientes, deteniendo polling');
+        timer.cancel();
+        return;
+      }
+      
+      // Verificar estado de cada frame pendiente
+      for (final frameId in List.from(_pendingFrames)) {
+        add(CheckFrameStatusEvent(frameId: frameId));
+      }
+    });
   }
 
   @override

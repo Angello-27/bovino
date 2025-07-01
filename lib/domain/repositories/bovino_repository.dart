@@ -6,22 +6,20 @@ import '../../core/errors/failures.dart';
 ///
 /// Define las operaciones disponibles para el análisis de frames
 /// siguiendo Clean Architecture y el patrón Repository.
+/// 
+/// El flujo asíncrono reemplaza completamente el análisis síncrono:
+/// 1. submitFrameForAnalysis - Envía frame para análisis
+/// 2. checkFrameStatus - Consulta estado del análisis
 abstract class BovinoRepository {
-  /// Analiza un frame de ganado bovino y retorna información detallada.
+  /// Envía un frame para análisis asíncrono.
   ///
-  /// [framePath] - Ruta del frame a analizar
+  /// [framePath] - Ruta del frame a enviar
+  /// Retorna `Either<Failure, String>` con el ID del frame o error
+  Future<Either<Failure, String>> submitFrameForAnalysis(String framePath);
+
+  /// Verifica el estado de un frame enviado.
   ///
-  /// Retorna un [Either<Failure, BovinoEntity>] donde:
-  /// - [Left] contiene un [Failure] si ocurre un error
-  /// - [Right] contiene un [BovinoEntity] con el análisis exitoso
-  ///
-  /// Ejemplo de uso:
-  /// ```dart
-  /// final resultado = await repository.analizarFrame('path/to/frame.jpg');
-  /// resultado.fold(
-  ///   (failure) => print('Error: ${failure.message}'),
-  ///   (bovino) => print('Raza: ${bovino.raza}'),
-  /// );
-  /// ```
-  Future<Either<Failure, BovinoEntity>> analizarFrame(String framePath);
+  /// [frameId] - ID del frame a consultar
+  /// Retorna `Either<Failure, BovinoEntity?>` con el resultado o error
+  Future<Either<Failure, BovinoEntity?>> checkFrameStatus(String frameId);
 }

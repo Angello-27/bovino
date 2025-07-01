@@ -25,6 +25,9 @@ import '../../presentation/blocs/connectivity_bloc.dart';
 // Repositories
 import '../../domain/repositories/bovino_repository.dart';
 
+// Data Sources
+import '../../data/datasources/remote/tensorflow_server_datasource.dart';
+
 /// Coordinador principal para inyección de dependencias
 /// Sigue Clean Architecture y separación de responsabilidades
 class DependencyInjection {
@@ -36,7 +39,7 @@ class DependencyInjection {
     _logger.i('🚀 Starting dependency injection...');
 
     try {
-      // 1. Configurar infraestructura (HTTP, WebSocket)
+      // 1. Configurar infraestructura (HTTP)
       await _initializeInfrastructure();
 
       // 2. Configurar servicios core
@@ -281,7 +284,7 @@ class DependencyInjection {
 
       // FrameAnalysisService
       _getIt.registerSingleton<FrameAnalysisService>(
-        FrameAnalysisService(_getIt<Dio>()),
+        FrameAnalysisService(_getIt<TensorFlowServerDataSource  >()),
       );
       _logger.d('✅ FrameAnalysisService registered');
 

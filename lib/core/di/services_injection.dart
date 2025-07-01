@@ -9,6 +9,9 @@ import '../services/splash_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/frame_analysis_service.dart';
 
+// Data Sources
+import '../../data/datasources/remote/tensorflow_server_datasource.dart';
+
 /// Módulo para inyección de servicios core
 /// Sigue Clean Architecture y separación de responsabilidades
 class ServicesInjection {
@@ -35,11 +38,11 @@ class ServicesInjection {
     _getIt.registerSingleton<ConnectivityService>(ConnectivityService(_getIt<Dio>()));
     _logger.d('✅ ConnectivityService registered');
 
-    // Servicio de análisis asíncrono de frames
+    // Servicio de análisis asíncrono de frames usando el datasource
     _getIt.registerSingleton<FrameAnalysisService>(
-      FrameAnalysisService(_getIt<Dio>()),
+      FrameAnalysisService(_getIt<TensorFlowServerDataSource>()),
     );
-    _logger.d('✅ FrameAnalysisService registered');
+    _logger.d('✅ FrameAnalysisService registered with TensorFlowServerDataSource');
 
     // Conectar CameraService con FrameAnalysisService
     final cameraService = _getIt<CameraService>();

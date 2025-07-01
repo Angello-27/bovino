@@ -299,7 +299,7 @@ _getIt.registerSingleton<SplashService>(SplashService());
 
 // ✅ Singleton para datasources
 _getIt.registerSingleton<TensorFlowServerDataSource>(
-  TensorFlowServerDataSourceImpl(dio, websocket),
+  TensorFlowServerDataSourceImpl(dio),
 );
 
 // ✅ Factory para BLoCs
@@ -838,7 +838,7 @@ Future<Either<Failure, BovinoEntity>> analizarFrame(String framePath);
 /// 
 /// Proporciona funcionalidades para:
 /// - Envío de frames al servidor
-/// - Recepción de notificaciones via WebSocket
+/// - Recepción de notificaciones via HTTP Polling
 /// - Manejo de errores de conexión
 /// - Verificación de estado del servidor
 /// - Análisis de peso estimado del bovino
@@ -868,7 +868,7 @@ abstract class TensorFlowServerDataSource {
 ```
 feat: agregar splash screen nativo con animaciones
 feat: implementar Atomic Design completo con screens
-fix: corregir error en conexión WebSocket
+fix: corregir error en conexión HTTP
 docs: actualizar documentación de API
 refactor: simplificar lógica de cámara
 test: agregar tests para SplashBloc

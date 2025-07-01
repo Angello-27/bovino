@@ -49,7 +49,6 @@ lib/
 │   ├── di/                 # Inyección de dependencias modular
 │   │   ├── dependency_injection.dart    # Coordinador principal
 │   │   ├── http_injection.dart          # Configuración HTTP
-│   │   ├── websocket_injection.dart     # Configuración WebSocket
 │   │   ├── services_injection.dart      # Servicios core
 │   │   ├── data_injection.dart          # Capa de datos
 │   │   └── presentation_injection.dart  # Capa de presentación
@@ -136,9 +135,9 @@ Cámara → CameraService → CameraBloc → UI
 Frame → TensorFlowServerDataSourceImpl → BovinoRepository → BovinoBloc → UI
 ```
 
-### 4. **Notificaciones Asíncronas**
+### 4. **Consulta de Estado Asíncrona**
 ```
-Servidor → WebSocket → BovinoBloc → UI
+Servidor → HTTP Polling → BovinoBloc → UI
 ```
 
 ## 🎨 Patrones de Diseño
@@ -162,7 +161,7 @@ Servidor → WebSocket → BovinoBloc → UI
 - **Testabilidad** mejorada
 
 ### 4. **Observer Pattern**
-- **WebSocket** para notificaciones
+- **HTTP Polling** para consulta de estado
 - **Streams** para comunicación reactiva
 
 ### 5. **Factory Pattern**
@@ -190,7 +189,7 @@ Servidor → WebSocket → BovinoBloc → UI
 
 ### Comunicación
 - **Dio**: Cliente HTTP con interceptores
-- **web_socket_channel**: WebSocket para notificaciones
+- **HTTP Polling**: Consulta periódica de estado
 
 ### Cámara y Permisos
 - **camera**: Acceso a cámara optimizado
@@ -254,7 +253,7 @@ class SplashError extends SplashState {}
 - **Temas**: Sistema de diseño avanzado
 
 ### Data
-- **Datasources**: Comunicación con APIs y WebSocket
+- **Datasources**: Comunicación con APIs HTTP
 - **Models**: Representación de datos con validaciones
 - **Repositories**: Implementación de contratos
 
@@ -284,7 +283,7 @@ SplashPage → SplashBloc → SplashService → Verificación de servidor
 HomePage → ScreenHome → Organisms → Molecules → Atoms
 CameraPage → ScreenCamera → CameraBloc → CameraService → Frame Capture
 Frame → BovinoBloc → Repository → TensorFlowServerDataSourceImpl
-Server → WebSocket → BovinoBloc → UI Update (incluyendo peso estimado)
+Server → HTTP Polling → BovinoBloc → UI Update (incluyendo peso estimado)
 ```
 
 ### 3. **Manejo de Errores**
@@ -369,7 +368,7 @@ cameraService.startFrameCapture();
 - **Módulos separados** por responsabilidad
 - **Logger** para debugging profesional
 - **Interceptores HTTP** para logging
-- **WebSocket** con manejo de errores
+- **HTTP Polling** con manejo de errores
 - **Registro de dependencias** organizado
 
 ### Estructura Modular
@@ -381,7 +380,7 @@ _getIt.registerSingleton<SplashService>(SplashService());
 
 // Datasources
 _getIt.registerSingleton<TensorFlowServerDataSource>(
-  TensorFlowServerDataSourceImpl(dio, websocket),
+  TensorFlowServerDataSourceImpl(dio),
 );
 
 // BLoCs con Factory pattern
@@ -404,8 +403,8 @@ _getIt.registerFactory<SplashBloc>(
 
 ### Configuración del Servidor
 - **URL**: `http://192.168.0.8:8000`
-- **WebSocket**: `ws://192.168.0.8:8000/ws`
-- **Endpoints**: `/analyze-frame`, `/health`
+- **HTTP Polling**: Consulta periódica cada 2 segundos
+- **Endpoints**: `/submit-frame`, `/check-status/{frame_id}`, `/health`
 - **Respuesta**: Incluye `peso_estimado` en kg
 
 ## 🧪 Testing
