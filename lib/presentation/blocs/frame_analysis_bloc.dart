@@ -124,6 +124,9 @@ class _EmitResultEvent extends FrameAnalysisEvent {
   List<Object?> get props => [result];
 }
 
+/// Evento para limpiar completamente el estado (cuando se sale al home)
+class ClearFrameAnalysisStateEvent extends FrameAnalysisEvent {}
+
 /// BLoC para manejar el análisis de frames usando BovinoBloc
 class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
   late FrameAnalysisService _frameAnalysisService;
@@ -148,6 +151,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     on<CheckFrameStatusEvent>(_onCheckFrameStatus);
     on<_UpdateProcessingStateEvent>(_onUpdateProcessingState);
     on<_EmitResultEvent>(_onEmitResult);
+    on<ClearFrameAnalysisStateEvent>(_onClearFrameAnalysisState);
     
     // Inicializar listener del BovinoBloc
     _listenToBovinoBloc();
@@ -229,9 +233,18 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
       // Limpiar estado del BovinoBloc
       _bovinoBloc.add(ClearBovinoState());
       
-      // Volver al estado inicial
-      emit(FrameAnalysisInitial());
-      _logger.i('✅ Análisis de frames detenido');
+      // NO volver al estado inicial - mantener el último resultado exitoso
+      // Si hay un resultado exitoso, mantenerlo visible
+      if (_results.isNotEmpty) {
+        final lastResult = _results.values.last;
+        _logger.i('✅ Manteniendo resultado visible: ${lastResult['raza']} - ${lastResult['confianza']}');
+        emit(FrameAnalysisSuccess(result: lastResult));
+      } else {
+        // Solo si no hay resultados, volver al estado inicial
+        emit(FrameAnalysisInitial());
+      }
+      
+      _logger.i('✅ Análisis de frames detenido - Resultado mantenido');
     } catch (e) {
       _logger.e('❌ Error al detener análisis de frames: $e');
       emit(FrameAnalysisError(message: 'Error al detener análisis: $e'));
@@ -302,12 +315,7 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     try {
       _logger.d('🔍 Verificando estado de frame: ${event.frameId}');
       
-      // Usar BovinoBloc para verificar el estado
-      _bovinoBloc.add(CheckFrameStatus(event.frameId));
-      
-      // Escuchar el estado del BovinoBloc para obtener el resultado
-      // Nota: En una implementación real, esto se manejaría con streams
-      // Por ahora, usamos el servicio directamente para obtener el estado
+      // Usar el servicio directamente para verificar el estado
       final result = await _frameAnalysisService.checkFrameStatus(event.frameId);
       
       if (result != null && result['status'] == 'completed' && result['result'] != null) {
@@ -326,17 +334,20 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         
         _results[event.frameId] = resultData;
         
-        _logger.i('✅ Frame procesado: ${event.frameId}');
+        _logger.i('✅ Frame procesado: ${event.frameId} - Raza: ${resultData['raza']} - Confianza: ${resultData['confianza']}');
         
-        // Emitir resultado
-        emit(FrameAnalysisSuccess(result: resultData));
+        // Verificar si debemos mostrar este resultado
+        _shouldShowResult(resultData);
         
-        // Actualizar estado de procesamiento
-        emit(FrameAnalysisProcessing(
-          pendingFrames: _pendingFrames.length,
-          processedFrames: _processedFrames,
-          successfulFrames: _successfulFrames,
-        ));
+        // NO emitir FrameAnalysisProcessing después del primer resultado exitoso
+        // Solo mantener el estado actual (FrameAnalysisSuccess) si ya tenemos un resultado
+        if (_results.length == 1) {
+          // Primer resultado - ya se emitió FrameAnalysisSuccess en _shouldShowResult
+          _logger.d('🎯 Primer resultado obtenido - manteniendo estado de éxito');
+        } else {
+          // Resultados adicionales - el estado ya se actualizó en _shouldShowResult
+          _logger.d('🔄 Resultado adicional - estado actualizado en _shouldShowResult');
+        }
       } else if (result != null && result['status'] == 'failed') {
         // Frame falló
         _pendingFrames.remove(event.frameId);
@@ -344,17 +355,55 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         
         _logger.e('❌ Frame falló: ${event.frameId} - ${result['error']}');
         
-        // Actualizar estado de procesamiento
-        emit(FrameAnalysisProcessing(
-          pendingFrames: _pendingFrames.length,
-          processedFrames: _processedFrames,
-          successfulFrames: _successfulFrames,
-        ));
+        // NO emitir FrameAnalysisProcessing si ya tenemos un resultado exitoso
+        if (_results.isNotEmpty) {
+          _logger.d('⚠️ Frame falló pero manteniendo resultado exitoso existente');
+        } else {
+          // Solo emitir procesamiento si no hay resultados exitosos
+          emit(FrameAnalysisProcessing(
+            pendingFrames: _pendingFrames.length,
+            processedFrames: _processedFrames,
+            successfulFrames: _successfulFrames,
+          ));
+        }
+      } else if (result != null && result['status'] == 'pending') {
+        _logger.d('⏳ Frame aún pendiente: ${event.frameId}');
+      } else if (result != null && result['status'] == 'processing') {
+        _logger.d('🔄 Frame procesándose: ${event.frameId}');
       } else {
-        _logger.d('⏳ Frame aún procesándose: ${event.frameId}');
+        _logger.w('⚠️ Estado desconocido para frame: ${event.frameId} - $result');
       }
     } catch (e) {
       _logger.e('❌ Error al verificar estado de frame: $e');
+      // NO remover de la lista si hay error de red
+    }
+  }
+
+  /// Verificar si debemos mostrar este resultado (mejor precisión o diferente raza)
+  void _shouldShowResult(Map<String, dynamic> newResult) {
+    // Obtener el resultado actual si existe
+    final currentResult = _results.values.isNotEmpty ? _results.values.first : null;
+    
+    if (currentResult == null) {
+      // Primer resultado - mostrarlo
+      _logger.i('🎯 Primer resultado - mostrando: ${newResult['raza']}');
+      add(_EmitResultEvent(newResult));
+      return;
+    }
+    
+    final currentConfidence = double.tryParse(currentResult['confianza'] ?? '0') ?? 0.0;
+    final newConfidence = double.tryParse(newResult['confianza'] ?? '0') ?? 0.0;
+    final currentBreed = currentResult['raza'] ?? '';
+    final newBreed = newResult['raza'] ?? '';
+    
+    // Mostrar si:
+    // 1. Mejor precisión (más de 5% mejor)
+    // 2. Diferente raza
+    if (newConfidence > currentConfidence + 0.05 || newBreed != currentBreed) {
+      _logger.i('🔄 Reemplazando resultado: ${currentResult['raza']} (${currentResult['confianza']}) → ${newResult['raza']} (${newResult['confianza']})');
+      add(_EmitResultEvent(newResult));
+    } else {
+      _logger.d('⏭️ Manteniendo resultado actual: ${currentResult['raza']} (${currentResult['confianza']}) > ${newResult['raza']} (${newResult['confianza']})');
     }
   }
 
@@ -370,11 +419,15 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         return;
       }
       
+      _logger.d('🔍 Polling: verificando ${_pendingFrames.length} frames pendientes');
+      
       // Verificar estado de cada frame pendiente
       for (final frameId in List.from(_pendingFrames)) {
         add(CheckFrameStatusEvent(frameId: frameId));
       }
     });
+    
+    _logger.i('✅ Polling iniciado - verificando cada 2 segundos');
   }
 
   /// Escuchar el estado del BovinoBloc para capturar frame_ids
@@ -392,18 +445,9 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
         // Disparar evento interno para actualizar estado
         add(_UpdateProcessingStateEvent());
       } else if (state is BovinoResult) {
-        // Frame procesado exitosamente
-        _logger.i('✅ Resultado recibido: ${state.bovino.raza}');
-        
-        final resultData = {
-          'raza': state.bovino.raza,
-          'peso': state.bovino.pesoEstimado.toString(),
-          'confianza': state.bovino.confianza.toString(),
-          'caracteristicas': state.bovino.caracteristicas.join(', '),
-        };
-        
-        // Disparar evento interno para emitir resultado
-        add(_EmitResultEvent(resultData));
+        // Frame procesado exitosamente - esto NO debería pasar aquí
+        // porque el polling maneja los resultados
+        _logger.w('⚠️ BovinoResult recibido en listener - esto no debería pasar');
       } else if (state is BovinoError) {
         _logger.e('❌ Error en BovinoBloc: ${state.failure.message}');
       } else if (state is BovinoSubmitting) {
@@ -422,11 +466,16 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     _UpdateProcessingStateEvent event,
     Emitter<FrameAnalysisState> emit,
   ) {
-    emit(FrameAnalysisProcessing(
-      pendingFrames: _pendingFrames.length,
-      processedFrames: _processedFrames,
-      successfulFrames: _successfulFrames,
-    ));
+    // Solo emitir FrameAnalysisProcessing si no hay resultados exitosos
+    if (_results.isEmpty) {
+      emit(FrameAnalysisProcessing(
+        pendingFrames: _pendingFrames.length,
+        processedFrames: _processedFrames,
+        successfulFrames: _successfulFrames,
+      ));
+    } else {
+      _logger.d('📊 Actualización de estado ignorada - manteniendo resultado exitoso');
+    }
   }
 
   /// Handler para emitir resultado
@@ -434,14 +483,31 @@ class FrameAnalysisBloc extends Bloc<FrameAnalysisEvent, FrameAnalysisState> {
     _EmitResultEvent event,
     Emitter<FrameAnalysisState> emit,
   ) {
+    _logger.i('🎯 Emitiendo resultado exitoso: ${event.result['raza']} - ${event.result['confianza']}');
     emit(FrameAnalysisSuccess(result: event.result));
+  }
+
+  /// Handler para limpiar completamente el estado (cuando se sale al home)
+  void _onClearFrameAnalysisState(
+    ClearFrameAnalysisStateEvent event,
+    Emitter<FrameAnalysisState> emit,
+  ) {
+    _logger.i('🧹 Limpiando completamente el estado del FrameAnalysisBloc...');
     
-    // También actualizar estado de procesamiento
-    emit(FrameAnalysisProcessing(
-      pendingFrames: _pendingFrames.length,
-      processedFrames: _processedFrames,
-      successfulFrames: _successfulFrames,
-    ));
+    // Cancelar timers
+    _frameTimer?.cancel();
+    _statusTimer?.cancel();
+    
+    // Limpiar todo
+    _pendingFrames.clear();
+    _results.clear();
+    _processedFrames = 0;
+    _successfulFrames = 0;
+    
+    // Volver al estado inicial
+    emit(FrameAnalysisInitial());
+    
+    _logger.i('✅ Estado del FrameAnalysisBloc limpiado completamente');
   }
 
   @override

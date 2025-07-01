@@ -87,6 +87,9 @@ class CameraService {
       // Inicializar cámara
       await _controller!.initialize();
       
+      // Desactivar flash automático
+      await _controller!.setFlashMode(FlashMode.off);
+      
       _logger.i('✅ Cámara inicializada correctamente');
       _cameraStateController.add(CameraState.ready);
       

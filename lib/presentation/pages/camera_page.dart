@@ -35,6 +35,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
 
   bool _permissionsGranted = false;
   bool _isAnalyzing = false;
+  Map<String, dynamic>? _lastSuccessfulResult;
 
   @override
   void initState() {
@@ -96,7 +97,12 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
+      _logger.i('📱 App pausada - limpiando estado del análisis...');
       _stopAnalysis();
+      // Limpiar completamente el estado cuando se sale al home
+      _frameAnalysisBloc.add(ClearFrameAnalysisStateEvent());
+      // Limpiar también el resultado local
+      _lastSuccessfulResult = null;
     }
   }
 
@@ -243,6 +249,8 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     _logger.i('🚀 Iniciando análisis de frames...');
     setState(() {
       _isAnalyzing = true;
+      // Limpiar resultado anterior al iniciar nuevo análisis
+      _lastSuccessfulResult = null;
     });
 
     // Activar envío de frames para análisis en CameraBloc
@@ -678,6 +686,17 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: BlocBuilder<FrameAnalysisBloc, FrameAnalysisState>(
         builder: (context, state) {
+          // Guardar el resultado exitoso cuando se recibe
+          if (state is FrameAnalysisSuccess) {
+            _lastSuccessfulResult = state.result;
+          }
+          
+          // Si tenemos un resultado exitoso, mostrarlo (incluso si el estado actual es Processing)
+          if (_lastSuccessfulResult != null) {
+            return _buildResultsContent(_lastSuccessfulResult!);
+          }
+          
+          // Si no hay resultado exitoso, mostrar el estado actual
           if (state is FrameAnalysisInitial) {
             return _buildResultsPlaceholder(
               '🎯 Inicia el análisis para ver resultados',
@@ -688,8 +707,6 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
               '⚡ Procesando frames...',
               AppColors.warning,
             );
-          } else if (state is FrameAnalysisSuccess) {
-            return _buildResultsContent(state.result);
           } else if (state is FrameAnalysisError) {
             return _buildResultsPlaceholder(
               '❌ Error: ${state.message}',
