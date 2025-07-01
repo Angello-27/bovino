@@ -9,9 +9,9 @@ import logging
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
+from keras import layers
+from keras.preprocessing.image import ImageDataGenerator
+from keras.applications import MobileNetV2
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 
@@ -138,12 +138,12 @@ def main():
         validation_data=(X_test, y_test_encoded),
         epochs=epochs,
         batch_size=batch_size,
-        verbose=1
+        verbose="auto"
     )
     
     # Evaluar modelo
     logger.info("📊 Evaluando modelo...")
-    test_loss, test_accuracy = model.evaluate(X_test, y_test_encoded, verbose=0)
+    test_loss, test_accuracy = model.evaluate(X_test, y_test_encoded, verbose="silent")
     logger.info(f"✅ Precisión en test: {test_accuracy:.4f}")
     
     # Guardar modelo

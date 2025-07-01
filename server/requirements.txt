@@ -15,8 +15,8 @@ kagglehub==0.2.0
 kaggle==1.5.16
 
 # Dependencias para entrenamiento
-tensorflow-gpu==2.14.0
+# tensorflow-gpu==2.14.0  # Comentado por problemas de compatibilidad
 keras==2.14.0
 
-# TensorFlow (comentar si hay problemas de compatibilidad)
-# tensorflow==2.15.0 
+# TensorFlow (versión estable)
+tensorflow==2.14.0 
