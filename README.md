@@ -44,12 +44,9 @@ Una aplicación Flutter moderna que utiliza **cámara en vivo** para capturar fr
 El sistema implementa un algoritmo inteligente para mostrar solo los mejores resultados:
 
 #### **Reglas de Precisión**
-1. **Primer Resultado**: Mínimo 0.6% de precisión para ser mostrado
+1. **Primer Resultado**: Mínimo 70% de precisión para ser mostrado
 2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
-3. **Misma Raza**: Solo cambiar si la nueva precisión es mayor
-4. **Diferente Raza**: 
-   - Si precisión actual ≤ 0.5%: Cambiar si la nueva es mayor
-   - Si precisión actual > 0.5%: Solo cambiar si la nueva ≥ 0.6%
+3. **Reemplazo**: Solo cambiar si la nueva precisión es mayor (sin importar raza)
 
 ### Estados del Frame
 - **pending**: Frame recibido, esperando procesamiento
@@ -164,8 +161,8 @@ Los widgets están organizados siguiendo **Atomic Design** de manera completa:
 - ✅ **Variable de estado local** para mantener el último resultado exitoso
 
 ### **Experiencia de Usuario Optimizada**
-- 🎯 **Resultados de calidad**: Solo se muestran resultados con precisión ≥ 0.6%
-- 🔄 **Actualizaciones inteligentes**: Cambios solo cuando hay mejora real
+- 🎯 **Resultados de calidad**: Solo se muestran resultados con precisión ≥ 70%
+- 🔄 **Actualizaciones inteligentes**: Cambios solo cuando hay mejor precisión
 - 📱 **Persistencia de estado**: Resultados se mantienen aunque se detenga el análisis
 - 🧹 **Limpieza automática**: Estado se resetea al salir al home
 

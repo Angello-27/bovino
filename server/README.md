@@ -348,12 +348,9 @@ docker run -p 8000:8000 bovino-server
 El cliente Flutter implementa un algoritmo inteligente para mostrar solo los mejores resultados:
 
 #### **Reglas de Precisión**
-1. **Primer Resultado**: Mínimo 0.6% de precisión para ser mostrado
+1. **Primer Resultado**: Mínimo 70% de precisión para ser mostrado
 2. **Resultado Final**: Si la precisión ≥ 0.95%, no se cambia más
-3. **Misma Raza**: Solo cambiar si la nueva precisión es mayor
-4. **Diferente Raza**: 
-   - Si precisión actual ≤ 0.5%: Cambiar si la nueva es mayor
-   - Si precisión actual > 0.5%: Solo cambiar si la nueva ≥ 0.6%
+3. **Reemplazo**: Solo cambiar si la nueva precisión es mayor (sin importar raza)
 
 #### **Comportamiento de la UI**
 - ✅ **Mantiene el último resultado exitoso** visible
@@ -376,10 +373,10 @@ El cliente Flutter implementa un algoritmo inteligente para mostrar solo los mej
 
 ### Sistema de Restricciones de Precisión (Cliente)
 - ✅ **Algoritmo inteligente** para mostrar solo mejores resultados
-- ✅ **Primer resultado** con mínimo 0.6% de precisión
+- ✅ **Primer resultado** con mínimo 70% de precisión
 - ✅ **Resultado final** cuando precisión ≥ 0.95%
-- ✅ **Misma raza** solo cambia si mejor precisión
-- ✅ **Diferente raza** con restricciones de precisión
+- ✅ **Reemplazo basado solo en precisión** (sin importar raza)
+- ✅ **Eliminación de resultados de baja calidad** (< 70%)
 - ✅ **Logs detallados** con razones de cambio/rechazo
 
 ### Comportamiento de UI Mejorado (Cliente)
