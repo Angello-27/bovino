@@ -474,7 +474,7 @@ _getIt.registerFactory<SplashBloc>(
 - ✅ **Android (API 21+)**
 
 ### Configuración del Servidor
-- **URL**: `http://192.168.0.8:8000`
+- **URL**: `http://10.121.154.51:8000`
 - **HTTP Polling**: Consulta periódica cada 2 segundos
 - **Endpoints**: `/submit-frame`, `/check-status/{frame_id}`, `/health`
 - **Respuesta**: Incluye `peso_estimado` en kg

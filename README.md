@@ -187,7 +187,7 @@ flutter pub get
 ### 2. Configurar Servidor TensorFlow
 
 1. Configura la URL del servidor en `lib/core/constants/app_constants.dart`
-2. Asegúrate de que el servidor Python esté ejecutándose en `192.168.0.8`
+2. Asegúrate de que el servidor Python esté ejecutándose en `10.121.154.51`
 3. El servidor debe tener endpoints para:
    - Envío de frames: `POST /submit-frame` (análisis asíncrono)
    - Consulta de estado: `GET /check-status/{frame_id}` (HTTP polling)
